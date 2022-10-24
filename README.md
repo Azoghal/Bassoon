@@ -22,6 +22,7 @@ def fancyFunc(a of int, b of double) gives int as {
         return fancyFunc(a)
     }
     else{
+        # this is a comment
         while not condition {
             b -= 0.1; a -= 1
             condition = a == 0 or b > 0.5
