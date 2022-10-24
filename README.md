@@ -19,18 +19,18 @@ def fancyFunc(a of int, b of double) gives int as {
     bool condition
     condition = a == 0 or b > 0.5
     if condition {
-        return fancyFunc(a);
+        return fancyFunc(a)
     }
     else{
         while not condition {
-            b -= 0.1; a -= 1;
-            condition = a == 0 or b > 0.5;
+            b -= 0.1; a -= 1
+            condition = a == 0 or b > 0.5
         }
         for (int i = 1; i < 12; i++){
-            a -= i*b;
+            a -= i*b
         }
-        return a;
+        return a
     }
-    return -1;
+    return -1
 }
 ```
