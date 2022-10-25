@@ -5,7 +5,7 @@
 #include <string>
 
 namespace bassoon {
-class BassoonLexer{
+class Lexer{
     static SourceLoc lexer_loc_;
     static std::string identifier_;
     static double double_val_;
@@ -13,7 +13,7 @@ class BassoonLexer{
     static bool bool_val_;
     static int check_keyword(std::string candidate_token);
 public:
-    BassoonLexer();
+    Lexer() {};
     static int nextChar();
     static int nextTok();
 };

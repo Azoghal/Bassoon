@@ -8,6 +8,8 @@ set(CMAKE_CXX_COMPILER clang++)
 
 project(Bassoon VERSION 1.0 LANGUAGES C CXX)
 
+add_subdirectory(src)
+
 find_package(LLVM REQUIRED CONFIG)
 
 link_libraries()
@@ -32,7 +34,7 @@ include_directories(${LLVM_INCLUDE_DIRS})
 #separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
 add_definitions(${LLVM_DEFINITIONS_LIST})
 
-add_executable(Bassoon bassoon.cxx)
+add_executable(Bassoon src/bassoon.cxx src/lexer.cxx)
 
 llvm_map_components_to_libnames(llvm_libs core support irreader orcjit native)
 

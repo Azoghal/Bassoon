@@ -3,11 +3,13 @@
 
 namespace bassoon{
 
-BassoonLexer::BassoonLexer(){
-    lexer_loc_ = {1, 0}; // line 1 collumn 0
-}
+SourceLoc Lexer::lexer_loc_ = {1,0};
+std::string Lexer::identifier_ = "";
+int Lexer::int_val_ = 0;
+double Lexer::double_val_ = 0.0;
+bool Lexer::bool_val_ = false;
 
-int BassoonLexer::nextChar(){
+int Lexer::nextChar(){
     int character = getchar();
     if (character == '\n' || character == '\r'){
         lexer_loc_.line++;
@@ -19,7 +21,7 @@ int BassoonLexer::nextChar(){
     return character;
 }
 
-int BassoonLexer::check_keyword(std::string candidate_token){
+int Lexer::check_keyword(std::string candidate_token){
     if (identifier_ == "def")
             return tok_def;
         if (identifier_ == "gives")
@@ -63,7 +65,7 @@ int BassoonLexer::check_keyword(std::string candidate_token){
         return tok_identifier;
 }
 
-int BassoonLexer::nextTok(){
+int Lexer::nextTok(){
     static int last_character = ' ';
     while (isspace(last_character))
         last_character = nextChar();
