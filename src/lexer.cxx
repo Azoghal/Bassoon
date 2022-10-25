@@ -23,46 +23,48 @@ int Lexer::nextChar(){
 
 int Lexer::check_keyword(std::string candidate_token){
     if (identifier_ == "def")
-            return tok_def;
-        if (identifier_ == "gives")
-            return tok_gives;
-        if (identifier_ == "as")
-            return tok_as;
-        if (identifier_ == "return")
-            return tok_return;
+        return tok_def;
+    if (identifier_ == "gives")
+        return tok_gives;
+    if (identifier_ == "as")
+        return tok_as;
+    if (identifier_ == "return")
+        return tok_return;
 
-        if (identifier_ == "int")
-            return tok_int;
-        if (identifier_ == "double")
-            return tok_double;
-        if (identifier_ == "bool")
-            return tok_bool;
-        
-        if (identifier_ == "true")
-            return tok_true;
-        if (identifier_ == "false")
-            return tok_false;
+    if (identifier_ == "of")
+        return tok_of;
+    if (identifier_ == "int")
+        return tok_int;
+    if (identifier_ == "double")
+        return tok_double;
+    if (identifier_ == "bool")
+        return tok_bool;
+    
+    if (identifier_ == "true")
+        return tok_true;
+    if (identifier_ == "false")
+        return tok_false;
 
-        if (identifier_ == "if")
-            return tok_if;
-        if (identifier_ == "else")
-            return tok_else;
-        if (identifier_ == "for")
-            return tok_for;
-        if (identifier_ == "while")
-            return tok_while;
+    if (identifier_ == "if")
+        return tok_if;
+    if (identifier_ == "else")
+        return tok_else;
+    if (identifier_ == "for")
+        return tok_for;
+    if (identifier_ == "while")
+        return tok_while;
 
-        if (identifier_ == "not")
-            return tok_not;
-        if (identifier_ == "and")
-            return tok_and;
-        if (identifier_ == "or")
-            return tok_or;
-        if (identifier_ == "xor")
-            return tok_xor;
-        if (identifier_ == "nor")
-            return tok_nor;
-        return tok_identifier;
+    if (identifier_ == "not")
+        return tok_not;
+    if (identifier_ == "and")
+        return tok_and;
+    if (identifier_ == "or")
+        return tok_or;
+    if (identifier_ == "xor")
+        return tok_xor;
+    if (identifier_ == "nor")
+        return tok_nor;
+    return tok_identifier;
 }
 
 int Lexer::nextTok(){

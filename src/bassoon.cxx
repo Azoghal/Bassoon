@@ -2,10 +2,24 @@
 #include "tokens.hxx"
 #include <iostream>
 
+/*
+def foo(a of int) gives bool as {if a>10 {return true} else {return false}
+*/
+
 int main(){
-    //bassoon::BassoonLexer lexer;
-    int a = bassoon::Lexer::nextChar();
-    token val = static_cast<token>(a);
-    std::cout << val << "\n";
+    //bassoon: return: returnBassoonLexer lexer;
+    while(true){
+        int a = bassoon::Lexer::nextTok();
+        if (a<0){
+            fprintf(stderr, "%s\n", bassoon::tok_to_str(a).c_str());
+        }
+        else{
+            char c = a;
+            fprintf(stderr, "%c\n", c);
+        }
+        if (a == bassoon::tok_eof)
+            break;
+    }
+    
     return 0;
 }
