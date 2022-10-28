@@ -35,7 +35,7 @@ include_directories(${LLVM_INCLUDE_DIRS})
 add_definitions(${LLVM_DEFINITIONS_LIST})
 
 add_executable(Bassoon src/bassoon.cxx src/lexer.cxx)
-add_executable(Test src/test/lexer_test.cxx src/lexer.cxx)
+add_executable(Test src/test/driver.cxx src/test/lexer_test.cxx src/lexer.cxx)
 
 llvm_map_components_to_libnames(llvm_libs core support irreader orcjit native)
 
