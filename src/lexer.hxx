@@ -1,5 +1,5 @@
-#ifndef Bassoon_lexer_HXX
-#define Bassoon_lexer_HXX
+#ifndef Bassoon_src_lexer_HXX
+#define Bassoon_src_lexer_HXX
 
 #include "source_loc.hxx"
 #include <string>
@@ -22,4 +22,4 @@ public:
 } // end namespace bassoon
 
 
-#endif // Bassoon_lexer_HXX
+#endif // Bassoon_src_lexer_HXX

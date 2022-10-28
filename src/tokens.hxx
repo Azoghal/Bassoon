@@ -1,3 +1,6 @@
+#ifndef Bassoon_src_tokens_HXX
+#define Bassoon_src_tokens_HXX
+
 namespace bassoon{
 
 enum token {
@@ -77,3 +80,5 @@ static std::string tok_to_str(int t){
 }
 
 } // end namespace bassoon
+
+#endif // Bassoon_src_tokens_HXX
