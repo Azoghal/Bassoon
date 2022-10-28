@@ -22,8 +22,8 @@ int Lexer::nextChar(){
 }
 
 int Lexer::check_keyword(std::string candidate_token){
-    if (identifier_ == "def")
-        return tok_def;
+    if (identifier_ == "define")
+        return tok_define;
     if (identifier_ == "gives")
         return tok_gives;
     if (identifier_ == "as")

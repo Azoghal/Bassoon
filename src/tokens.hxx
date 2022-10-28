@@ -8,7 +8,7 @@ enum token {
     tok_eol = -2,
     
     //functions
-    tok_def = -3,
+    tok_define = -3,
     tok_gives = -4,
     tok_as = -5,
     tok_return = -6,
@@ -45,7 +45,7 @@ static std::string tok_to_str(int t){
     {
     case tok_eof : return "tok_eof";
     case tok_eol : return "tok_eol";
-    case tok_def : return "tok_def";
+    case tok_define : return "tok_define";
     case tok_gives : return "tok_gives";
     case tok_as : return "tok_as";
     case tok_return : return "tok_return";
