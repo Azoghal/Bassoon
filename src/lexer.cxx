@@ -97,6 +97,7 @@ int Lexer::nextTok(){
             num_string += last_character;
             last_character = nextChar();
         } while (isdigit(last_character) || (last_character == '.' && !has_decimal));
+        
         if (has_decimal){
             double_val_ = strtod(num_string.c_str(),nullptr);
             return tok_number_double;
