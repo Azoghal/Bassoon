@@ -27,7 +27,7 @@ def fancyFunc(a of int, b of double) gives int as {
             b -= 0.1; a -= 1
             condition = a == 0 or b > 0.5
         }
-        for (int i = 1; i < 12; i++){
+        for (int i = 1; i < 12; a=a+1){
             a -= i*b
         }
         return a
