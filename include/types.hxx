@@ -1,5 +1,5 @@
-#ifndef Bassoon_src_types_HXX
-#define Bassoon_src_types_HXX
+#ifndef Bassoon_include_types_HXX
+#define Bassoon_include_types_HXX
 
 #include <string>
 
@@ -23,4 +23,4 @@ static std::string type_to_str(int t){
 
 } // end namespace bassoon
 
-#endif // Bassoon_src_types_HXX
+#endif // Bassoon_include_types_HXX
