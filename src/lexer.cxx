@@ -8,9 +8,15 @@ std::string Lexer::identifier_ = "";
 int Lexer::int_val_ = 0;
 double Lexer::double_val_ = 0.0;
 bool Lexer::bool_val_ = false;
+std::function<int()> Lexer::bassoon_getchar_ = getchar;
+
+void Lexer::setSource(std::function<int()> source){
+    // Not strictly needed but protects bassoon_getchar as private attr.
+    bassoon_getchar_ = source;
+}
 
 int Lexer::nextChar(){
-    int character = getchar();
+    int character = bassoon_getchar_();
     if (character == '\n' || character == '\r'){
         lexer_loc_.line++;
         lexer_loc_.collumn = 0;
@@ -91,6 +97,7 @@ int Lexer::nextTok(){
             num_string += last_character;
             last_character = nextChar();
         } while (isdigit(last_character) || (last_character == '.' && !has_decimal));
+        
         if (has_decimal){
             double_val_ = strtod(num_string.c_str(),nullptr);
             return tok_number_double;

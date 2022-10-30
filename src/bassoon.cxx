@@ -6,8 +6,7 @@
 def foo(a of int) gives bool as {if a>10 {return true} else {return false}
 */
 
-int main(){
-    //bassoon: return: returnBassoonLexer lexer;
+int main(){   
     while(true){
         int a = bassoon::Lexer::nextTok();
         if (a<0){
@@ -19,7 +18,6 @@ int main(){
         }
         if (a == bassoon::tok_eof)
             break;
-    }
-    
+    } 
     return 0;
 }
