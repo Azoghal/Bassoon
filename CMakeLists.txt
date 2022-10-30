@@ -31,8 +31,11 @@ link_libraries(${LIBS} ${SYS_LIBS} ${LDF})
 # Enable project compile flags.. 
 
 include_directories(${LLVM_INCLUDE_DIRS})
+include_directories(include)
 #separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
 add_definitions(${LLVM_DEFINITIONS_LIST})
+
+
 
 add_executable(Bassoon src/bassoon.cxx src/lexer.cxx)
 add_executable(Test src/test/driver.cxx src/test/lexer_test.cxx src/lexer.cxx)

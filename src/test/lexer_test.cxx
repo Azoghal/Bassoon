@@ -3,8 +3,8 @@
 #include <string.h>
 
 #include "str_utils.hxx"
-#include "../lexer.hxx"
-#include "../tokens.hxx"
+#include "lexer.hxx"
+#include "tokens.hxx"
 #include "lexer_test.hxx"
 
 std::string input_string;
@@ -20,14 +20,9 @@ int mock(){
     return input_string[input_index++];
 }
 
-static inline void rtrim(std::string &s) {
-    s.erase(std::find_if(s.rbegin(), s.rend(),
-            std::not1(std::ptr_fun<int, int>(std::isspace))).base(), s.end());
-}
-
 std::vector<int> GetLexedTokens(std::string input){
     //trim and add a newline to stop interference with next test
-    str_utils::rtrim(input);
+    str_utils::trim(input);
     input+="\n";
     setup_input_string(input);
     std::vector<int> result;
@@ -139,8 +134,8 @@ int test::test_typed_variables(){
 int test::test_function_def(){
     fprintf(stderr, "test_function_def\n");
     std::vector<std::string> equivalent_definitions = {
-        "def foo ( a of int ) gives double as { return 0.0 }",
-        "def foo(a of int)gives double as{return 0.0}"
+        "define foo ( a of int ) gives double as { return 0.0 }",
+        "define foo(a of int)gives double as{return 0.0}"
     };
     std::vector<int> expected_tokens = {tok_define, tok_identifier,'(', tok_identifier, tok_of, tok_int, ')', tok_gives, tok_double, tok_as, '{',tok_return, tok_number_double,'}'};
     return countFailedCases(equivalent_definitions, expected_tokens);
