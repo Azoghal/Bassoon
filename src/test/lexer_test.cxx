@@ -142,7 +142,7 @@ int test::test_function_def(){
         "def foo ( a of int ) gives double as { return 0.0 }",
         "def foo(a of int)gives double as{return 0.0}"
     };
-    std::vector<int> expected_tokens = {tok_def, tok_identifier,'(', tok_identifier, tok_of, tok_int, ')', tok_gives, tok_double, tok_as, '{',tok_return, tok_number_double,'}'};
+    std::vector<int> expected_tokens = {tok_define, tok_identifier,'(', tok_identifier, tok_of, tok_int, ')', tok_gives, tok_double, tok_as, '{',tok_return, tok_number_double,'}'};
     return countFailedCases(equivalent_definitions, expected_tokens);
 }
 
