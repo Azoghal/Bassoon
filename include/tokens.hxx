@@ -1,5 +1,5 @@
-#ifndef Bassoon_src_tokens_HXX
-#define Bassoon_src_tokens_HXX
+#ifndef Bassoon_include_tokens_HXX
+#define Bassoon_include_tokens_HXX
 
 namespace bassoon{
 
@@ -81,4 +81,4 @@ static std::string tok_to_str(int t){
 
 } // end namespace bassoon
 
-#endif // Bassoon_src_tokens_HXX
+#endif // Bassoon_include_tokens_HXX

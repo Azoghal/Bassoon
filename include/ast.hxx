@@ -1,5 +1,5 @@
-#ifndef Bassoon_src_ast_HXX
-#define Bassoon_src_ast_HXX
+#ifndef Bassoon_include_ast_HXX
+#define Bassoon_include_ast_HXX
 
 #include "llvm/IR/BasicBlock.h"
 #include "source_loc.hxx"
@@ -161,4 +161,4 @@ public:
 
 } // namespace bassoon
 
-#endif // Bassoon_src_ast_HXX
+#endif // Bassoon_include_ast_HXX

@@ -7,42 +7,15 @@ set(CMAKE_C_COMPILER clang)
 set(CMAKE_CXX_COMPILER clang++)
 
 project(Bassoon VERSION 1.0 LANGUAGES C CXX)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+
+include_directories(include)
 
 add_subdirectory(src)
 
-find_package(LLVM REQUIRED CONFIG)
-
-link_libraries()
-execute_process(COMMAND llvm-config --libs OUTPUT_VARIABLE LIBS)
-execute_process(COMMAND llvm-config --system-libs OUTPUT_VARIABLE SYS_LIBS)
-execute_process(COMMAND llvm-config --ldflags OUTPUT_VARIABLE LDF)
-message(STATUS "Found LLVM" ${LIBS})
-
-string(STRIP ${LIBS} LIBS)
-string(STRIP ${SYS_LIBS} SYS_LIBS)
-string(STRIP ${LDF} LDF)
-
-message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
-message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
-
-
-link_libraries(${LIBS} ${SYS_LIBS} ${LDF})
-
-# Enable project compile flags.. 
-
-include_directories(${LLVM_INCLUDE_DIRS})
-include_directories(include)
-#separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
-add_definitions(${LLVM_DEFINITIONS_LIST})
-
-
-
-add_executable(Bassoon src/bassoon.cxx src/lexer.cxx)
-add_executable(Test src/test/driver.cxx src/test/lexer_test.cxx src/lexer.cxx)
-
-llvm_map_components_to_libnames(llvm_libs core support irreader orcjit native)
-
-target_link_libraries(Bassoon ${llvm_libs})
+#add_executable(bassoon src/bassoon.cxx src/lexer.cxx src/parser.cxx)
 
 #configure_file(source_name destination_name COPYONLY)
 
