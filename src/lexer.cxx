@@ -130,6 +130,19 @@ int Lexer::nextTok(){
     return this_character;
 }
 
+std::string Lexer::getIdentifier(){
+    return identifier_;
+}
+
+// these are probably more parse-y than lex-y
+double Lexer::getDouble(){
+    return double_val_;
+}
+int Lexer::getInt(){
+    return int_val_;
+}
+
+
 SourceLoc Lexer::getLoc(){
     return lexer_loc_;
 }

@@ -13,6 +13,7 @@ class Parser{
     static std::map<char,int> bin_op_precedence_;
     static int getNextToken();
     static int expectedNextToken(int expected);
+    static int expectNextTokenIsType();
     static int getTokPrecedence();
     static std::unique_ptr<ExprAST> parseExpression();
     static std::unique_ptr<ExprAST> parseBoolExpr();

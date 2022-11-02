@@ -79,6 +79,15 @@ static std::string tok_to_str(int t){
     }
 }
 
+static int isType(int tok){
+    if (tok == tok_bool ||
+        tok == tok_int ||
+        tok == tok_double)
+        return 1;
+    else
+        return 0;
+}
+
 } // end namespace bassoon
 
 #endif // Bassoon_include_tokens_HXX

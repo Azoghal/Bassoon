@@ -91,6 +91,7 @@ class BinaryExprAST : public ExprAST {
 public:
     BinaryExprAST(SourceLoc loc, char opcode, std::unique_ptr<ExprAST> lhs, std::unique_ptr<ExprAST> rhs)
         : ExprAST(loc), opcode_(opcode), lhs_(std::move(lhs)), rhs_(std::move(rhs)) {};
+    llvm::Value *codegen() override;
 };
 
 //--------------------------
@@ -140,10 +141,11 @@ public:
 class PrototypeAST {
     SourceLoc loc_;
     std::string name_;
-    std::vector<std::string> args_;
+    std::vector<std::pair<std::string,int>> args_;
+    int return_type_;
 public:
-    PrototypeAST(SourceLoc loc, const std::string &name, std::vector<std::string> args)
-        : loc_(loc), name_(name), args_(args) {};
+    PrototypeAST(SourceLoc loc, const std::string &name, std::vector<std::pair<std::string,int>> args, int return_type)
+        : loc_(loc), name_(name), args_(args), return_type_(return_type) {};
     const std::string &getName() const {return name_;};
     llvm::Function *codegen();
 };
