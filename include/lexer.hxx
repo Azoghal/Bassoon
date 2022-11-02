@@ -12,13 +12,17 @@ class Lexer{
     static std::string identifier_;
     static double double_val_;
     static int int_val_;
-    static bool bool_val_;
+    static bool bool_val_; // redundant?
     static int check_keyword(std::string candidate_token);
 public:
     Lexer() {};
     static void setSource(std::function<int()> source);
     static int nextChar();
     static int nextTok();
+    static std::string getIdentifier();
+    static double getDouble();
+    static int getInt();
+    static SourceLoc getLoc();
 };
 
 

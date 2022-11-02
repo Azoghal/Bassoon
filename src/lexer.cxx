@@ -130,4 +130,8 @@ int Lexer::nextTok(){
     return this_character;
 }
 
+SourceLoc Lexer::getLoc(){
+    return lexer_loc_;
+}
+
 } // end namespace bassoon
