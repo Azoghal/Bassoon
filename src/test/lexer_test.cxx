@@ -31,7 +31,7 @@ std::vector<int> GetLexedTokens(std::string input){
         result.push_back(t);
     }
     // for(int i : result){
-    //     fprintf(stderr, "%d: %s\n", i, bassoon::tok_to_str(i).c_str());
+    //     fprintf(stderr, "%d: %s\n", i, bassoon::tokToStr(i).c_str());
     // }
     return result;
 }
@@ -42,7 +42,7 @@ int verifyExpectedTokens(std::vector<int> to_check, std::vector<int> expected){
     
     for (int i=0; i<c_size && i<e_size; ++i){
         if (to_check[i] != expected[i]){
-            fprintf(stderr, "Element %d of lexed tokens (%d: %s) differs from expected (%s).\n", i,to_check[i],bassoon::tok_to_str(to_check[i]).c_str(), bassoon::tok_to_str(expected[i]).c_str());
+            fprintf(stderr, "Element %d of lexed tokens (%d: %s) differs from expected (%s).\n", i,to_check[i],bassoon::tokToStr(to_check[i]).c_str(), bassoon::tokToStr(expected[i]).c_str());
             return 1;
         }
     }
@@ -50,10 +50,10 @@ int verifyExpectedTokens(std::vector<int> to_check, std::vector<int> expected){
         fprintf(stderr, "Lexed tokens of size %d differs from expected tokens of size %d\n", c_size, e_size);
         fprintf(stderr,"Lexed\n");
         for(int i : to_check)
-            fprintf(stderr,"%s, ", bassoon::tok_to_str(i).c_str());
+            fprintf(stderr,"%s, ", bassoon::tokToStr(i).c_str());
         fprintf(stderr,"\nExpected\n");
         for(int i : expected)
-            fprintf(stderr,"%s, ", bassoon::tok_to_str(i).c_str());
+            fprintf(stderr,"%s, ", bassoon::tokToStr(i).c_str());
         return 1;
     }
     fprintf(stderr, "pass\n");

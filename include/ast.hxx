@@ -61,12 +61,14 @@ public:
 // Variable Expressions
 //-----------------------
 
+// reference
 class VariableExprAST : public ExprAST{
     std::string name_;
     BType type_;
+    //std::unique_ptr<ExprAST> init_expr_;
 public:
-    VariableExprAST(SourceLoc loc, const std::string name, BType type) 
-        : ExprAST(loc), name_(name), type_(type) {};
+    VariableExprAST(SourceLoc loc, const std::string name, BType type, std::unique_ptr<ExprAST> init_expr) 
+        : ExprAST(loc), name_(name), type_(type) {}; //, init_expr_(std::move(init_expr)) {};
     llvm::Value *codegen() override;
     std::string getName() {return name_;};
     BType getType() {return type_;};

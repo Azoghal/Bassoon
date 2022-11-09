@@ -2,8 +2,8 @@
 #define Bassoon_include_log_error_HXX
 
 template<class T> 
-T LogError(const char *str){
-    fprintf(stderr, "Error %s\n", str);
+T LogError(std::string str){
+    fprintf(stderr, "Error: %s\n", str.c_str());
     return nullptr;
 }
 

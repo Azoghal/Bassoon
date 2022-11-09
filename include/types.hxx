@@ -6,14 +6,16 @@
 namespace bassoon{
 
 enum BType {
-    type_bool = 0,
-    type_int = 1,
-    type_double = 2,
+    type_void = 0,
+    type_bool = 1,
+    type_int = 2,
+    type_double = 3,
 };
 
-static std::string type_to_str(int t){
+static std::string typeToStr(int t){
     switch (t)
     {
+    case type_void : return "void";
     case type_bool : return "bool";
     case type_int : return "int";
     case type_double : return "double";
