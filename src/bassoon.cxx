@@ -14,7 +14,6 @@ define boolBaz() as {a=false;}
 
 int main(){
     int a = bassoon::Lexer::nextTok(); // skip newline
-    bassoon::Parser::parseDefinition();
     a++;
     return 0;
 }

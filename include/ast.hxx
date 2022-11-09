@@ -8,11 +8,21 @@
 namespace bassoon
 {
 
+// class NodeAST{
+//     SourceLoc loc_;
+// public:
+//     NodeAST(SourceLoc loc) : loc_(loc) {};
+//     virtual ~NodeAST() = default;
+//     virtual llvm::Value *codegen() = 0;
+//     int getLine() const {return loc_.line;};
+//     int getCol() const {return loc_.collumn;};
+// };
+
 //----------------------
 // Base Expression class
 //----------------------
 
-class ExprAST{
+class ExprAST {
     SourceLoc loc_;
 public:
     ExprAST(SourceLoc loc) : loc_(loc) {};
@@ -64,14 +74,11 @@ public:
 // reference
 class VariableExprAST : public ExprAST{
     std::string name_;
-    BType type_;
-    //std::unique_ptr<ExprAST> init_expr_;
 public:
-    VariableExprAST(SourceLoc loc, const std::string name, BType type, std::unique_ptr<ExprAST> init_expr) 
-        : ExprAST(loc), name_(name), type_(type) {}; //, init_expr_(std::move(init_expr)) {};
+    VariableExprAST(SourceLoc loc, const std::string name) 
+        : ExprAST(loc), name_(name) {};
     llvm::Value *codegen() override;
     std::string getName() {return name_;};
-    BType getType() {return type_;};
 };
 
 //-----------------------
@@ -95,35 +102,52 @@ public:
         : ExprAST(loc), opcode_(opcode), lhs_(std::move(lhs)), rhs_(std::move(rhs)) {};
     llvm::Value *codegen() override;
 };
+// -------------------------
+// Statements
+// -------------------------
 
-//--------------------------
-// Control Flow Expressions
-//--------------------------
-
-class IfExprAST : public ExprAST {
-    std::unique_ptr<ExprAST> cond_, then_, else_;
+class StatementAST{
+    SourceLoc loc_;
 public:
-    IfExprAST(SourceLoc loc, std::unique_ptr<ExprAST> cond, std::unique_ptr<ExprAST> then, std::unique_ptr<ExprAST> elsewise) 
-        : ExprAST(loc), cond_(std::move(cond)), then_(std::move(then)), else_(std::move(elsewise)) {};
+    StatementAST(SourceLoc loc) : loc_(loc) {};
+    virtual ~StatementAST() = default;
+    virtual llvm::Value *codegen() = 0;
+    int getLine() const {return loc_.line;};
+    int getCol() const {return loc_.collumn;};
+};
+
+
+//--------------------------
+// Control Flow Statements
+//--------------------------
+
+class IfExprAST : public StatementAST {
+    std::unique_ptr<ExprAST> cond_;
+    std::unique_ptr<StatementAST> then_, else_;
+public:
+    IfExprAST(SourceLoc loc, std::unique_ptr<ExprAST> cond, std::unique_ptr<StatementAST> then, std::unique_ptr<StatementAST> elsewise) 
+        : StatementAST(loc), cond_(std::move(cond)), then_(std::move(then)), else_(std::move(elsewise)) {};
     llvm::Value *codegen() override;
 };
 
-class ForExprAST : public ExprAST {
+class ForExprAST : public StatementAST {
     //std::vector<std::string> ind_var_names;
     std::string ind_var_name_;
     //BType ind_var_type_;
-    std::unique_ptr<ExprAST> start_, end_, step_, body_;
+    std::unique_ptr<ExprAST> end_;
+    std::unique_ptr<StatementAST> start_, step_, body_;
 public:
-    ForExprAST(SourceLoc loc, const std::string &ind_var_name, std::unique_ptr<ExprAST> start, std::unique_ptr<ExprAST> end, std::unique_ptr<ExprAST> step, std::unique_ptr<ExprAST> body)
-        : ExprAST(loc), ind_var_name_(ind_var_name), start_(std::move(start)), end_(std::move(end)), step_(std::move(step)), body_(std::move(body)) {};
+    ForExprAST(SourceLoc loc, const std::string &ind_var_name, std::unique_ptr<StatementAST> start, std::unique_ptr<ExprAST> end, std::unique_ptr<StatementAST> step, std::unique_ptr<StatementAST> body)
+        : StatementAST(loc), ind_var_name_(ind_var_name), start_(std::move(start)), end_(std::move(end)), step_(std::move(step)), body_(std::move(body)) {};
     llvm::Value *codegen() override;
 };
 
-class WhileExprAST : public ExprAST {
-    std::unique_ptr<ExprAST> cond_, body_;
+class WhileExprAST : public StatementAST {
+    std::unique_ptr<ExprAST> cond_;
+    std::unique_ptr<StatementAST> body_;
 public:
-    WhileExprAST(SourceLoc loc, std::unique_ptr<ExprAST> cond, std::unique_ptr<ExprAST> body)
-        : ExprAST(loc), cond_(std::move(cond)), body_(std::move(body)) {};
+    WhileExprAST(SourceLoc loc, std::unique_ptr<ExprAST> cond, std::unique_ptr<StatementAST> body)
+        : StatementAST(loc), cond_(std::move(cond)), body_(std::move(body)) {};
     llvm::Value *codegen() override;
 };
 
@@ -137,6 +161,14 @@ class CallExprAST : public ExprAST {
 public:
     CallExprAST(SourceLoc loc, const std::string &callee, std::vector<std::unique_ptr<ExprAST>> args) 
         : ExprAST(loc), callee_(callee), args_(std::move(args)) {};
+    llvm::Value *codegen() override;
+};
+
+class CallStatementAST : public StatementAST {
+    std::unique_ptr<CallExprAST> call_;
+public:
+    CallStatementAST(SourceLoc loc, std::unique_ptr<CallExprAST> call)
+        : StatementAST(loc), call_(std::move(call)) {};
     llvm::Value *codegen() override;
 };
 
