@@ -121,32 +121,32 @@ public:
 // Control Flow Statements
 //--------------------------
 
-class IfExprAST : public StatementAST {
+class IfStatementAST : public StatementAST {
     std::unique_ptr<ExprAST> cond_;
     std::unique_ptr<StatementAST> then_, else_;
 public:
-    IfExprAST(SourceLoc loc, std::unique_ptr<ExprAST> cond, std::unique_ptr<StatementAST> then, std::unique_ptr<StatementAST> elsewise) 
+    IfStatementAST(SourceLoc loc, std::unique_ptr<ExprAST> cond, std::unique_ptr<StatementAST> then, std::unique_ptr<StatementAST> elsewise) 
         : StatementAST(loc), cond_(std::move(cond)), then_(std::move(then)), else_(std::move(elsewise)) {};
     llvm::Value *codegen() override;
 };
 
-class ForExprAST : public StatementAST {
+class ForStatementAST : public StatementAST {
     //std::vector<std::string> ind_var_names;
     std::string ind_var_name_;
     //BType ind_var_type_;
     std::unique_ptr<ExprAST> end_;
     std::unique_ptr<StatementAST> start_, step_, body_;
 public:
-    ForExprAST(SourceLoc loc, const std::string &ind_var_name, std::unique_ptr<StatementAST> start, std::unique_ptr<ExprAST> end, std::unique_ptr<StatementAST> step, std::unique_ptr<StatementAST> body)
+    ForStatementAST(SourceLoc loc, const std::string &ind_var_name, std::unique_ptr<StatementAST> start, std::unique_ptr<ExprAST> end, std::unique_ptr<StatementAST> step, std::unique_ptr<StatementAST> body)
         : StatementAST(loc), ind_var_name_(ind_var_name), start_(std::move(start)), end_(std::move(end)), step_(std::move(step)), body_(std::move(body)) {};
     llvm::Value *codegen() override;
 };
 
-class WhileExprAST : public StatementAST {
+class WhileStatementAST : public StatementAST {
     std::unique_ptr<ExprAST> cond_;
     std::unique_ptr<StatementAST> body_;
 public:
-    WhileExprAST(SourceLoc loc, std::unique_ptr<ExprAST> cond, std::unique_ptr<StatementAST> body)
+    WhileStatementAST(SourceLoc loc, std::unique_ptr<ExprAST> cond, std::unique_ptr<StatementAST> body)
         : StatementAST(loc), cond_(std::move(cond)), body_(std::move(body)) {};
     llvm::Value *codegen() override;
 };
