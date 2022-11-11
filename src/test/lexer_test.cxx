@@ -1,24 +1,15 @@
 #include <iostream>
 #include <functional>
-#include <string.h>
+#include <string>
 
 #include "str_utils.hxx"
 #include "lexer.hxx"
 #include "tokens.hxx"
 #include "lexer_test.hxx"
+#include "test_utils.hxx"
 
-std::string input_string;
-int input_index, input_end;
-
-void setup_input_string(std::string input){
-    input_string = input;
-    input_index = 0;
-    input_end = input_string.size();
-}
-
-int mock(){
-    return input_string[input_index++];
-}
+namespace bassoon{
+namespace test{
 
 std::vector<int> GetLexedTokens(std::string input){
     //trim and add a newline to stop interference with next test
@@ -27,7 +18,7 @@ std::vector<int> GetLexedTokens(std::string input){
     setup_input_string(input);
     std::vector<int> result;
     while(input_index < input_end){
-        int t = bassoon::Lexer::nextTok();
+        int t = Lexer::nextTok();
         result.push_back(t);
     }
     // for(int i : result){
@@ -83,9 +74,7 @@ int countFailedCases(std::vector<std::string> test_cases, std::vector<std::vecto
     return tests_failed;
 }
 
-namespace bassoon{
-
-int test::test_immediate_double(){
+int test_immediate_double(){
     fprintf(stderr, "test_immediate_double\n");
     std::vector<std::string> double_examples = {
         "0.1",
@@ -96,7 +85,7 @@ int test::test_immediate_double(){
     return countFailedCases(double_examples, expected_tokens);
 }
 
-int test::test_immediate_int(){
+int test_immediate_int(){
     fprintf(stderr, "test_immediate_int\n");
     std::vector<std::string> int_examples = {
         "0",
@@ -106,7 +95,7 @@ int test::test_immediate_int(){
     return countFailedCases(int_examples, expected_tokens);
 }
 
-int test::test_immediate_bool(){
+int test_immediate_bool(){
     fprintf(stderr, "test_immediate_bool\n");
     std::vector<std::string> int_examples = {
         "false",
@@ -116,7 +105,7 @@ int test::test_immediate_bool(){
     return countFailedCases(int_examples, expected_tokens_list);
 }
 
-int test::test_typed_variables(){
+int test_typed_variables(){
     fprintf(stderr, "test_typed_variables\n");
     std::vector<std::string> typed = {
         "a of int",
@@ -131,7 +120,7 @@ int test::test_typed_variables(){
     return countFailedCases(typed, expected_tokens_list);
 }
 
-int test::test_function_def(){
+int test_function_def(){
     fprintf(stderr, "test_function_def\n");
     std::vector<std::string> equivalent_definitions = {
         "define foo ( a of int ) gives double as { return 0.0 }",
@@ -141,7 +130,7 @@ int test::test_function_def(){
     return countFailedCases(equivalent_definitions, expected_tokens);
 }
 
-int test::test_for_loop(){
+int test_for_loop(){
     fprintf(stderr, "test_for_loop\n");
     std::vector<std::string> equivalent_loops = {
         "for ( a of int = 0; a < 10; a = a +1) { } ",
@@ -151,7 +140,7 @@ int test::test_for_loop(){
     return countFailedCases(equivalent_loops, expected_tokens);
 }
 
-int test::test_while_loop(){
+int test_while_loop(){
     fprintf(stderr, "test_while_loop\n");
     std::vector<std::string> equivalent_loops = {
         "while ( a < 10) {b = b + a;} ",
@@ -161,7 +150,7 @@ int test::test_while_loop(){
     return countFailedCases(equivalent_loops, expected_tokens);
 }
     
-int test::test_lexer(){
+int test_lexer(){
     Lexer::setSource(mock);
     test_immediate_int();
     test_immediate_double();
@@ -173,4 +162,5 @@ int test::test_lexer(){
     return 0;
 }
 
+} // namespace test
 } // namespace bassoon
