@@ -1,7 +1,7 @@
 #include <iostream>
 
 #include "lexer_test.hxx"
-#include "parse_test.hxx"
+#include "parser_test.hxx"
 
 int main(){
     // mock getchar??

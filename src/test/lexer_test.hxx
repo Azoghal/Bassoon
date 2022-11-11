@@ -1,5 +1,5 @@
-#ifndef Bassoon_src_test_lexer_HXX
-#define Bassoon_src_test_lexer_HXX
+#ifndef Bassoon_src_test_lexer_test_HXX
+#define Bassoon_src_test_lexer_test_HXX
 
 namespace bassoon{
 namespace test{
@@ -22,4 +22,4 @@ int test_function_def();
 } //namespace bassoon
 } //namespace test
 
-#endif // Bassoon_src_test_lexer_HXX
+#endif // Bassoon_src_test_lexer_test_HXX

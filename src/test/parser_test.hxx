@@ -1,5 +1,5 @@
-#ifndef Bassoon_src_test_parser_HXX
-#define Bassoon_src_test_parser_HXX
+#ifndef Bassoon_src_test_parser_test_HXX
+#define Bassoon_src_test_parser_test_HXX
 
 namespace bassoon{
 namespace test{
@@ -20,4 +20,4 @@ int test_call_expr();
 } //namespace bassoon
 } //namespace test
 
-#endif // Bassoon_src_test_parser_HXX
+#endif // Bassoon_src_test_parser_test_HXX

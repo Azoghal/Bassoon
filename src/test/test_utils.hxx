@@ -3,6 +3,8 @@
 
 #include <string>
 
+#include "lexer.hxx"
+
 namespace bassoon{
 namespace test{
 
@@ -18,6 +20,10 @@ void setup_input_string(std::string input){
 
 int mock(){
     return input_string[input_index++];
+}
+
+void setupSource(){
+    Lexer::setSource(mock);
 }
 
 } // namespace test
