@@ -6,6 +6,13 @@
 namespace bassoon
 {
 
+void Parser::printParseAndToken(std::string parseFunction){
+    fprintf(stderr, "Parsing %15s, " , parseFunction.c_str());
+    fprintf(stderr, "%3i ", current_token_);
+    fprintf(stderr, " %c  ", current_token_);
+    fprintf(stderr, "%s\n",  tokToStr(current_token_).c_str());
+}
+
 std::unique_ptr<PrototypeAST> LogErrorP(std::string s){
     return LogError<std::unique_ptr<PrototypeAST>>(s);
 }
@@ -19,31 +26,43 @@ std::unique_ptr<FunctionAST> LogErrorF(std::string s){
 }
 
 int Parser::current_token_ = ' ';
-std::map<char,int> Parser::bin_op_precedence_ = std::map<char,int>();
+std::map<char,int> Parser::bin_op_precedence_ = std::map<char,int>({{'-', 10}, {'+', 20}, {'/', 30}, {'*', 40}});
+
 
 int Parser::getNextToken(){
     return Parser::current_token_ = Lexer::nextTok();
 }
 
 int Parser::getTokPrecedence(){
-    return Parser::bin_op_precedence_[Parser::current_token_];
+    // some token, not an operator
+    if(!isascii(current_token_))
+        return -1;
+
+    int tok_prec = Parser::bin_op_precedence_[Parser::current_token_];
+    // set to -1 if not an entry
+    if (tok_prec <= 0)
+        tok_prec = -1; 
+    return tok_prec;
 }
 
 std::unique_ptr<ExprAST> Parser::parseExpression(){
-    // consume a primary (that could be unaried)
+    printParseAndToken("Expression");    // consume a primary (that could be unaried)
     auto lhs = Parser::parseUnary();
     if (!lhs)
         return LogError<std::unique_ptr<ExprAST>>("Error in parseExpression - no LHS");
 
     // Try to parse a possible right hand side of the expression.
+    printParseAndToken("Expr, nextBinop");
     return parseBinaryOpRHS(0, std::move(lhs));
 }
 
 std::unique_ptr<ExprAST> Parser::parseUnary(){
+    printParseAndToken("Unary");
     SourceLoc unary_loc = Lexer::getLoc();
     // !isascii(current_token_) 
     // means guaranteed to be a keyword and hence some other expression.
     if (!isascii(current_token_) || current_token_ == '('){
+        printParseAndToken("unary->primary");
         return parsePrimary();
     }
     // otherwise it must be an operator
@@ -56,16 +75,20 @@ std::unique_ptr<ExprAST> Parser::parseUnary(){
 }
 
 std::unique_ptr<ExprAST> Parser::parsePrimary(){
+    printParseAndToken("Primary");
     switch (current_token_){
         default:
+            printParseAndToken("parsePrim.Error");
             return LogErrorE("Unknown token when expecting an expression");
         case tok_identifier:
             return parseIdentifierExpr();
-        case tok_bool:
+        case tok_true:
             return parseBoolExpr();
-        case tok_int:
+        case tok_false:
+            return parseBoolExpr();
+        case tok_number_int:
             return parseIntExpr();
-        case tok_double:
+        case tok_number_double:
             return parseDoubleExpr();
         case '(':
             return parseParenExpr();
@@ -73,20 +96,25 @@ std::unique_ptr<ExprAST> Parser::parsePrimary(){
 }
 
 std::unique_ptr<ExprAST> Parser::parseBinaryOpRHS(int expr_precedence, std::unique_ptr<ExprAST> lhs){
+    printParseAndToken("BinaryOpRHS");
     // lhs op rhs
     // lhs op rhs1 op rhs2
     // build up tree of binop(lhs rhs) ast nodes to represent whole expression
     while (true){
+        // Operators have positive precedence. Non operators have negative precedence
         int tok_prec = getTokPrecedence(); 
+        printParseAndToken("binopCmp");
         if (tok_prec < expr_precedence){
             // this is not a binop rhs
+            fprintf(stderr, "returning lhs\n");
             return lhs;
         }
+        fprintf(stderr, "in a bin_op\n");
         // we are in a binop
         int bin_op = current_token_;
         SourceLoc bin_loc = Lexer::getLoc();
         getNextToken(); // consume the operator
-        
+        printParseAndToken("bin op");
         auto rhs = parseUnary();
         if (!rhs)
             return nullptr;
@@ -104,6 +132,7 @@ std::unique_ptr<ExprAST> Parser::parseBinaryOpRHS(int expr_precedence, std::uniq
 }
 
 std::unique_ptr<ExprAST> Parser::parseParenExpr(){
+    printParseAndToken("Paren");
     getNextToken(); // consume '('
     auto expression = parseExpression();
     if (!expression)
@@ -117,34 +146,50 @@ std::unique_ptr<ExprAST> Parser::parseParenExpr(){
 }
 
 std::unique_ptr<ExprAST> Parser::parseBoolExpr(){
+    printParseAndToken("Bool");
     SourceLoc bool_loc = Lexer::getLoc();
-    if (current_token_ == tok_false)
+    if (current_token_ == tok_false){
+        getNextToken();
         return std::make_unique<BoolExprAST>(bool_loc, false);
-    else if (current_token_ == tok_true)
+    }
+    else if (current_token_ == tok_true){
+        getNextToken(); // consume the bool
         return std::make_unique<BoolExprAST>(bool_loc, true);
+    }
     return nullptr;
 }
 
 std::unique_ptr<ExprAST> Parser::parseIntExpr(){
+    printParseAndToken("Int");
     SourceLoc int_loc = Lexer::getLoc();
-    if (current_token_ == tok_number_int)
-        return std::make_unique<IntExprAST>(int_loc, Lexer::getInt());
+    if (current_token_ == tok_number_int){
+        int int_val = Lexer::getInt();
+        getNextToken(); // consume the number
+        return std::make_unique<IntExprAST>(int_loc, int_val);
+    }
     return nullptr;
 }
 
 std::unique_ptr<ExprAST> Parser::parseDoubleExpr(){
+    printParseAndToken("Double");
     SourceLoc double_loc = Lexer::getLoc();
-    if (current_token_ == tok_number_double)
-        return std::make_unique<DoubleExprAST>(double_loc, Lexer::getDouble());
+    if (current_token_ == tok_number_double){
+        double double_val = Lexer::getDouble();
+        getNextToken(); // consume the number
+        return std::make_unique<DoubleExprAST>(double_loc, double_val);
+    }
     return nullptr;
 }
 
 std::unique_ptr<ExprAST> Parser::parseIdentifierExpr(){
+    printParseAndToken("Identifier");
     SourceLoc literal_loc = Lexer::getLoc();
     std::string identifier_name = Lexer::getIdentifier();
-    if(current_token_ != '(')
+    if(current_token_ != '('){
+        getNextToken(); // consume the identifier.
         return std::make_unique<VariableExprAST>(literal_loc, identifier_name);
-    
+    }
+       
     getNextToken(); // consume '('
     std::vector<std::unique_ptr<ExprAST>> args;
     bool expecting_another_arg = false;
@@ -174,19 +219,42 @@ std::unique_ptr<ExprAST> Parser::parseIdentifierExpr(){
     return std::make_unique<CallExprAST>(literal_loc, identifier_name, std::move(args));
 }
 
-// static std::unique_ptr<StatementAST> parseStatement();
-// static std::unique_ptr<StatementAST> parseBlockStatement();
-// static std::unique_ptr<StatementAST> parseInitStatement();
-// static std::unique_ptr<StatementAST> parseAssignStatement();
-// static std::unique_ptr<StatementAST> parseIfStatement();
-// static std::unique_ptr<StatementAST> parseForStatement();
-// static std::unique_ptr<StatementAST> parseWhileStatement();
-// static std::unique_ptr<StatementAST> parseCallStatement();
-// static std::unique_ptr<StatementAST> parseReturnStatement();
+// std::unique_ptr<StatementAST> Parser::parseStatement();
 
-// static std::unique_ptr<FunctionAST> parseDefinition();
+// std::unique_ptr<StatementAST> Parser::parseBlockStatement();
 
-// static std::unique_ptr<PrototypeAST> parsePrototype();
-// static std::unique_ptr<PrototypeAST> parseExtern();
+// std::unique_ptr<StatementAST> Parser::parseInitStatement();
+// std::unique_ptr<StatementAST> Parser::parseAssignStatement();
+// std::unique_ptr<StatementAST> Parser::parseIfStatement();
+// std::unique_ptr<StatementAST> Parser::parseForStatement();
+// std::unique_ptr<StatementAST> Parser::parseWhileStatement();
+// std::unique_ptr<StatementAST> Parser::parseCallStatement();
+// std::unique_ptr<StatementAST> Parser::parseReturnStatement();
+
+// std::unique_ptr<FunctionAST> Parser::parseDefinition();
+
+// std::unique_ptr<PrototypeAST> Parser::parsePrototype();
+// std::unique_ptr<PrototypeAST> Parser::parseExtern();
+
+void Parser::mainLoop(){
+    //while(true){
+    //fprintf(stderr, "mainLoop, current_token_ = %i %c %s\n",current_token_, current_token_,  tokToStr(current_token_).c_str());
+    printParseAndToken("mainLoop");
+    switch(current_token_){
+    case tok_eof:
+        return;
+    case 32:
+        getNextToken();
+    //     parseDefinition();
+    // case tok_extern:
+    //     parseExtern();
+    default:
+        auto a = parseExpression();
+        if(a)
+            fprintf(stderr, "looks like it parsed ok");
+        //parseStatement();
+    }
+    //}
+}
 
 } // namespace bassoon

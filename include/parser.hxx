@@ -14,6 +14,8 @@ class Parser{
     static int getNextToken();
     static int getTokPrecedence();
 
+    static void printParseAndToken(std::string parseFunction);
+
     static std::unique_ptr<ExprAST> parseExpression();
     static std::unique_ptr<ExprAST> parseUnary();
     static std::unique_ptr<ExprAST> parseBinaryOpRHS(int expr_precedence, std::unique_ptr<ExprAST> lhs);
@@ -23,7 +25,7 @@ class Parser{
     static std::unique_ptr<ExprAST> parseIntExpr();
     static std::unique_ptr<ExprAST> parseDoubleExpr();
     static std::unique_ptr<ExprAST> parseIdentifierExpr();
-    static std::unique_ptr<StatementAST> parseCallExpr();
+    static std::unique_ptr<ExprAST> parseCallExpr();
 
     static std::unique_ptr<StatementAST> parseStatement();
     static std::unique_ptr<StatementAST> parseBlockStatement();
@@ -42,7 +44,10 @@ class Parser{
 
 public:
     static void setBinopPrecedence(std::map<char,int> precedents);
-    //static void addBinopPrecedence(char c, int precedent);
+    static void mainLoop();
+    
+    // Only for use in test
+    static std::unique_ptr<ExprAST> _testParseExpression();
 };
 
 } // namespace bassoon

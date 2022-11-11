@@ -13,7 +13,11 @@ define boolBaz() as {a=false;}
 */
 
 int main(){
-    int a = bassoon::Lexer::nextTok(); // skip newline
+    int a = 1;
+    // while(a >= 0)
+    //     a = bassoon::Lexer::nextTok(); // skip newline
+    // fprintf(stderr, "first token is a %c %s\n", a, bassoon::tokToStr(a).c_str());
+    bassoon::Parser::mainLoop();
     a++;
     return 0;
 }
