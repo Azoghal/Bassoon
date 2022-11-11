@@ -26,7 +26,7 @@ add_definitions(${LLVM_DEFINITIONS_LIST})
 add_executable(Bassoon bassoon.cxx lexer.cxx parser.cxx codegen.cxx)
 
 #if(testing_enabled)
-add_executable(Test lexer.cxx)
+add_executable(Test lexer.cxx parser.cxx ast.cxx codegen.cxx)
 add_subdirectory(test)
 #endif();
 

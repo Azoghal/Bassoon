@@ -11,13 +11,13 @@
 namespace bassoon{
 namespace test{
 
-std::vector<int> GetLexedTokens(std::string input){
+std::vector<int> getLexedTokens(std::string input){
     //trim and add a newline to stop interference with next test
     str_utils::trim(input);
     input+="\n";
-    setup_input_string(input);
+    utils::setup_input_string(input);
     std::vector<int> result;
-    while(input_index < input_end){
+    while(utils::input_index < utils::input_end){
         int t = Lexer::nextTok();
         result.push_back(t);
     }
@@ -54,7 +54,7 @@ int verifyExpectedTokens(std::vector<int> to_check, std::vector<int> expected){
 int countFailedCases(std::vector<std::string> test_cases, std::vector<int> expected_tokens){
     int tests_failed = 0;
     for (std::string test_case : test_cases){
-        std::vector<int> lexed_tokens = GetLexedTokens(test_case);
+        std::vector<int> lexed_tokens = getLexedTokens(test_case);
         tests_failed += verifyExpectedTokens(lexed_tokens, expected_tokens);
     }
     return tests_failed;
@@ -68,7 +68,7 @@ int countFailedCases(std::vector<std::string> test_cases, std::vector<std::vecto
     }
     int tests_failed = 0;
     for (int i=0; i<test_cases.size(); ++i){
-        std::vector<int> lexed_tokens = GetLexedTokens(test_cases[i]);
+        std::vector<int> lexed_tokens = getLexedTokens(test_cases[i]);
         tests_failed += verifyExpectedTokens(lexed_tokens, expected_tokens_list[i]);
     }
     return tests_failed;
@@ -151,7 +151,7 @@ int test_while_loop(){
 }
     
 int test_lexer(){
-    Lexer::setSource(mock);
+    Lexer::setSource(utils::mock);
     test_immediate_int();
     test_immediate_double();
     test_immediate_bool();

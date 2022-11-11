@@ -47,7 +47,7 @@ public:
     static void mainLoop();
     
     // Only for use in test
-    static std::unique_ptr<ExprAST> _testParseExpression();
+    static std::unique_ptr<ExprAST> _testParseExpression(){return parseExpression();};
 };
 
 } // namespace bassoon

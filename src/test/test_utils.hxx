@@ -7,25 +7,26 @@
 
 namespace bassoon{
 namespace test{
+namespace utils{
 
+static std::string input_string;
+static int input_index, input_end;
 
-std::string input_string;
-int input_index, input_end;
-
-void setup_input_string(std::string input){
+static void setup_input_string(std::string input){
     input_string = input;
     input_index = 0;
     input_end = input_string.size();
 }
 
-int mock(){
+static int mock(){
     return input_string[input_index++];
 }
 
-void setupSource(){
+static void setupSource(){
     Lexer::setSource(mock);
 }
 
+} // namespace utils
 } // namespace test
 } // namespace bassoon
 
