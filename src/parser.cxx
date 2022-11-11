@@ -6,6 +6,22 @@
 namespace bassoon
 {
 
+int Parser::current_token_ = ' ';
+std::map<char,int> Parser::bin_op_precedence_ = std::map<char,int>({{'-', 10}, {'+', 20}, {'/', 30}, {'*', 40}});
+std::function<int()> Parser::bassoon_nextTok_ = Lexer::nextTok;
+
+
+void Parser::setSource(std::function<int()> source){
+    // Not strictly needed but protects bassoon_getchar as private attr.
+    bassoon_nextTok_ = source;
+}
+
+int Parser::getNextToken(){
+    return current_token_ = bassoon_nextTok_();
+    //return Parser::current_token_ = Lexer::nextTok();
+}
+
+
 void Parser::printParseAndToken(std::string parseFunction){
     fprintf(stderr, "Parsing %15s, " , parseFunction.c_str());
     fprintf(stderr, "%3i ", current_token_);
@@ -23,14 +39,6 @@ std::unique_ptr<ExprAST> LogErrorE(std::string s){
 
 std::unique_ptr<FunctionAST> LogErrorF(std::string s){
     return LogError<std::unique_ptr<FunctionAST>>(s);
-}
-
-int Parser::current_token_ = ' ';
-std::map<char,int> Parser::bin_op_precedence_ = std::map<char,int>({{'-', 10}, {'+', 20}, {'/', 30}, {'*', 40}});
-
-
-int Parser::getNextToken(){
-    return Parser::current_token_ = Lexer::nextTok();
 }
 
 int Parser::getTokPrecedence(){

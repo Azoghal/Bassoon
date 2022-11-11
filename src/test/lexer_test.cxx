@@ -15,9 +15,9 @@ std::vector<int> getLexedTokens(std::string input){
     //trim and add a newline to stop interference with next test
     str_utils::trim(input);
     input+="\n";
-    utils::setup_input_string(input);
+    utils::setupLexerSourceString(input);
     std::vector<int> result;
-    while(utils::input_index < utils::input_end){
+    while(utils::lexer_source_index < utils::lexer_source_end){
         int t = Lexer::nextTok();
         result.push_back(t);
     }
@@ -151,7 +151,7 @@ int test_while_loop(){
 }
     
 int test_lexer(){
-    Lexer::setSource(utils::mock);
+    utils::setupLexerSource(); // gives mocking getchar to lexer
     test_immediate_int();
     test_immediate_double();
     test_immediate_bool();

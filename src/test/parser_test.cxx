@@ -21,7 +21,10 @@ namespace test{
 
 int test_bool_expr(){
     fprintf(stderr,"test_bool_expr\n");
-    utils::setup_input_string("true");
+    
+    std::vector<int> source_tokens = {tok_false, tok_eof};
+    
+    utils::setupParseSourceTokens(source_tokens);
     std::unique_ptr<ExprAST> result = Parser::_testParseExpression();
     return check(std::move(result));
 }
@@ -36,7 +39,7 @@ int test_call_expr();
 
     
 int test_parser(){
-    utils::setupSource();
+    utils::setupParserSource();
     test_bool_expr();
     return 0;
 }

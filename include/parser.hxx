@@ -5,6 +5,7 @@
 #include <memory>
 #include "ast.hxx"
 
+
 namespace bassoon
 {
 
@@ -13,6 +14,7 @@ class Parser{
     static std::map<char,int> bin_op_precedence_;
     static int getNextToken();
     static int getTokPrecedence();
+    static std::function<int()> bassoon_nextTok_;
 
     static void printParseAndToken(std::string parseFunction);
 
@@ -45,6 +47,7 @@ class Parser{
 public:
     static void setBinopPrecedence(std::map<char,int> precedents);
     static void mainLoop();
+    static void setSource(std::function<int()> source);
     
     // Only for use in test
     static std::unique_ptr<ExprAST> _testParseExpression(){return parseExpression();};
