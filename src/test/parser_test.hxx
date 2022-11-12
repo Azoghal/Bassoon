@@ -6,16 +6,16 @@ namespace test{
 
 int test_parser();
 
+int test_expressions();
+
 int test_bool_expr();
 int test_int_expr();
 int test_double_expr();
-
 int test_paren_expr();
-
 int test_binop_expr();
-
 int test_call_expr();
 
+int test_statements();
 
 } //namespace bassoon
 } //namespace test

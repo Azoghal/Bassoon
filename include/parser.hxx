@@ -15,6 +15,7 @@ class Parser{
     static int getNextToken();
     static int getTokPrecedence();
     static std::function<int()> bassoon_nextTok_;
+    static int verbosity_;
 
     static void printParseAndToken(std::string parseFunction);
 
@@ -48,9 +49,12 @@ public:
     static void setBinopPrecedence(std::map<char,int> precedents);
     static void mainLoop();
     static void setSource(std::function<int()> source);
+
+    static void setVerbosity(int verbosity){verbosity_ = verbosity;};
     
     // Only for use in test
     static std::unique_ptr<ExprAST> _testParseExpression(){return parseExpression();};
+    static void _testResetCurrentToken(){current_token_ = ' ';};
 };
 
 } // namespace bassoon

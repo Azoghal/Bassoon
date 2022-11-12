@@ -36,9 +36,12 @@ static std::vector<int> parserTokens;
 static int parserTokensIndex, parserTokensEnd;
 
 static void setupParseSourceTokens(std::vector<int> tokens){
+    
     parserTokens = tokens;
     parserTokensIndex = 0;
     parserTokensEnd = parserTokens.size()-1;
+    // reset parser to be fresh each time.
+    Parser::_testResetCurrentToken();
     if(parserTokens[parserTokens.size()-1] != tok_eof){
         fprintf(stderr,"Warning, no tok_eof to end token vector");
     } 

@@ -9,6 +9,7 @@ namespace bassoon
 int Parser::current_token_ = ' ';
 std::map<char,int> Parser::bin_op_precedence_ = std::map<char,int>({{'-', 10}, {'+', 20}, {'/', 30}, {'*', 40}});
 std::function<int()> Parser::bassoon_nextTok_ = Lexer::nextTok;
+int Parser::verbosity_ = 0;
 
 
 void Parser::setSource(std::function<int()> source){
@@ -23,10 +24,13 @@ int Parser::getNextToken(){
 
 
 void Parser::printParseAndToken(std::string parseFunction){
-    fprintf(stderr, "Parsing %15s, " , parseFunction.c_str());
-    fprintf(stderr, "%3i ", current_token_);
-    fprintf(stderr, " %c  ", current_token_);
-    fprintf(stderr, "%s\n",  tokToStr(current_token_).c_str());
+    if (verbosity_ > 0){
+        fprintf(stderr, "Parsing %15s, " , parseFunction.c_str());
+        fprintf(stderr, "%3i ", current_token_);
+        fprintf(stderr, " %c  ", current_token_);
+        fprintf(stderr, "%s\n",  tokToStr(current_token_).c_str());
+    }
+    
 }
 
 std::unique_ptr<PrototypeAST> LogErrorP(std::string s){
@@ -114,10 +118,8 @@ std::unique_ptr<ExprAST> Parser::parseBinaryOpRHS(int expr_precedence, std::uniq
         printParseAndToken("binopCmp");
         if (tok_prec < expr_precedence){
             // this is not a binop rhs
-            fprintf(stderr, "returning lhs\n");
             return lhs;
         }
-        fprintf(stderr, "in a bin_op\n");
         // we are in a binop
         int bin_op = current_token_;
         SourceLoc bin_loc = Lexer::getLoc();
@@ -246,20 +248,20 @@ std::unique_ptr<ExprAST> Parser::parseIdentifierExpr(){
 
 void Parser::mainLoop(){
     //while(true){
-    //fprintf(stderr, "mainLoop, current_token_ = %i %c %s\n",current_token_, current_token_,  tokToStr(current_token_).c_str());
     printParseAndToken("mainLoop");
     switch(current_token_){
     case tok_eof:
         return;
-    case 32:
+    case 32: // ' '
         getNextToken();
+    // case tok_define;
     //     parseDefinition();
     // case tok_extern:
     //     parseExtern();
     default:
         auto a = parseExpression();
         if(a)
-            fprintf(stderr, "looks like it parsed ok");
+            fprintf(stderr, "Parsed Successfully");
         //parseStatement();
     }
     //}
