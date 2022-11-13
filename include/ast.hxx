@@ -196,12 +196,16 @@ public:
     llvm::Value *codegen() override;
 };
 
-// class InitStatementAST : public StatementAST{
-//     std::unique_ptr<Assignment
-//     std::unique_ptr<ExprAST> value_;
-// public:
-//     InitStatementAST
-// }
+class InitStatementAST : public StatementAST{
+    std::string identifier_;
+    BType var_type_;
+    std::unique_ptr<AssignStatementAST> assignment_;
+public:
+    InitStatementAST(SourceLoc loc, std::string identifier, BType var_type, std::unique_ptr<AssignStatementAST> assignment)
+        : StatementAST(loc), identifier_(identifier), var_type_(var_type), assignment_(std::move(assignment)) {};
+    llvm::Value *codegen() override;
+};
+
 //-------------------------
 // Function Expressions
 //-------------------------

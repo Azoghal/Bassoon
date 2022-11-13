@@ -6,6 +6,7 @@
 namespace bassoon{
 
 enum BType {
+    not_a_type = -1,
     type_void = 0,
     type_bool = 1,
     type_int = 2,

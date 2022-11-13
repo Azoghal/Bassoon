@@ -90,10 +90,10 @@ static int isType(int tok){
         return 0;
 }
 
-static int tokToType(int tok){
+static BType tokToType(int tok){
     switch(tok)
     {
-    default: return 0;
+    default: return not_a_type;
     case tok_bool: return type_bool;
     case tok_int: return type_int;
     case tok_double: return type_double;

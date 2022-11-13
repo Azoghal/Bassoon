@@ -337,31 +337,33 @@ std::unique_ptr<StatementAST> Parser::parseCallStatement(SourceLoc id_loc, std::
     return std::make_unique<CallStatementAST>(id_loc, std::move(call_expr));
 }
 
-// std::unique_ptr<StatementAST> Parser::parseInitStatement(SourceLoc id_loc, std::string id){
-//     // of type = value;
-//     if (current_token_ != tok_of)
-//         return LogErrorS("Expect current token to be tok_of at start of parseInit");
-//     getNextToken(); // consume of
+std::unique_ptr<StatementAST> Parser::parseInitStatement(SourceLoc id_loc, std::string id){
+    // of type = value;
+    if (current_token_ != tok_of)
+        return LogErrorS("Expect current token to be tok_of at start of parseInit");
+    getNextToken(); // consume of
 
-//     if(!isType(current_token_))
-//         return LogErrorS("Expected a type after of in variable initialisation");
-//     auto type = tokToType(current_token_);
-//     getNextToken(); // consume type
+    if(!isType(current_token_))
+        return LogErrorS("Expected a type after of in variable initialisation");
+    BType type = tokToType(current_token_);
+    getNextToken(); // consume type
 
-//     if(current_token_ != '=')
-//         return LogErrorS("Expected '=' after type in variable initialisation");
-//     getNextToken(); // consume '='
+    SourceLoc assign_loc = Lexer::getLoc();
+    if(current_token_ != '=')
+        return LogErrorS("Expected '=' after type in variable initialisation");
+    getNextToken(); // consume '='
 
-//     auto value = parseExpression();
-//     if(!value)
-//         return LogErrorS("Error with value of assignment");
+    auto value_expr = parseExpression();
+    if(!value_expr)
+        return LogErrorS("Error with value_expr of assignment");
     
-//     if(current_token_ != ';')
-//         return LogErrorS("Expected semicolon to end variable initialisation");
-//     getNextToken() // consume ';'
+    if(current_token_ != ';')
+        return LogErrorS("Expected semicolon to end variable initialisation");
+    getNextToken(); // consume ';'
 
-//     return ...;
-// }
+    auto assignment = std::make_unique<AssignStatementAST>(assign_loc, id, std::move(value_expr));
+    return std::make_unique<InitStatementAST>(id_loc, id, type, std::move(assignment));
+}
 
 std::unique_ptr<StatementAST> Parser::parseAssignStatement(SourceLoc id_loc, std::string id){
     if(current_token_ != '=')
