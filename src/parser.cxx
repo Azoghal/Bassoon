@@ -41,9 +41,14 @@ std::unique_ptr<ExprAST> LogErrorE(std::string s){
     return LogError<std::unique_ptr<ExprAST>>(s);
 }
 
+std::unique_ptr<StatementAST> LogErrorS(std::string s){
+    return LogError<std::unique_ptr<StatementAST>>(s);
+}
+
 std::unique_ptr<FunctionAST> LogErrorF(std::string s){
     return LogError<std::unique_ptr<FunctionAST>>(s);
 }
+
 
 int Parser::getTokPrecedence(){
     // some token, not an operator
@@ -229,17 +234,81 @@ std::unique_ptr<ExprAST> Parser::parseIdentifierExpr(){
     return std::make_unique<CallExprAST>(literal_loc, identifier_name, std::move(args));
 }
 
-// std::unique_ptr<StatementAST> Parser::parseStatement();
+std::unique_ptr<StatementAST> Parser::parseStatement(){
+    switch(current_token_){
+    case '{':
+        return parseBlockStatement();
+    case tok_if:
+        return parseIfStatement();
+    case tok_return:
+        return parseReturnStatement();
+    default:
+        return LogErrorS("Unexpected token to start statement.");
+    }
+}
+std::unique_ptr<StatementAST> Parser::parseBlockStatement(){
+    SourceLoc block_loc = Lexer::getLoc();
+    if (current_token_ != '{')
+        return LogErrorS("Expected '{' to start block of statements");
+    getNextToken(); // consume '{'
 
-// std::unique_ptr<StatementAST> Parser::parseBlockStatement();
+    std::vector<std::unique_ptr<StatementAST>> statements;
+    while(current_token_ != '}'){
+        statements.push_back(parseStatement());
+    }
+
+    getNextToken(); // consume '}'
+    return std::make_unique<BlockStatementAST>(block_loc, std::move(statements));
+}
 
 // std::unique_ptr<StatementAST> Parser::parseInitStatement();
 // std::unique_ptr<StatementAST> Parser::parseAssignStatement();
-// std::unique_ptr<StatementAST> Parser::parseIfStatement();
+
+std::unique_ptr<StatementAST> Parser::parseIfStatement(){
+    SourceLoc if_loc = Lexer::getLoc();
+    if(current_token_ != tok_if)
+        return LogErrorS("Expect if statement to start with tok_if");
+    getNextToken(); // consume tok_if
+
+    std::unique_ptr<ExprAST> cond;
+    std::unique_ptr<StatementAST> then, elsewise;
+
+    cond = parseExpression();
+
+    then = parseBlockStatement();
+    if(!then)
+        return LogErrorS("Expect statement block after condition.");
+    
+    if(current_token_ == tok_else){
+        elsewise = parseBlockStatement();
+        if (!elsewise)
+            return LogErrorS("Expected statement block after else");
+    }
+
+    return std::make_unique<IfStatementAST>(if_loc, std::move(cond), std::move(then), std::move(elsewise));
+}
+
 // std::unique_ptr<StatementAST> Parser::parseForStatement();
 // std::unique_ptr<StatementAST> Parser::parseWhileStatement();
 // std::unique_ptr<StatementAST> Parser::parseCallStatement();
-// std::unique_ptr<StatementAST> Parser::parseReturnStatement();
+
+std::unique_ptr<StatementAST> Parser::parseReturnStatement(){
+    SourceLoc return_loc = Lexer::getLoc();
+    if (current_token_ != tok_return)
+        return LogErrorS("Expect return statement to start with tok_return");
+    
+    getNextToken(); // consume return
+    
+    auto return_expr = parseExpression();
+    if(!return_expr)
+        return LogErrorS("Error with return expression");
+
+    if(current_token_ != ';')
+        return LogErrorS("Expected a semicolon to terminate return statement");
+    getNextToken(); // consume ';'
+
+    return std::make_unique<ReturnStatementAST>(return_loc, std::move(return_expr));
+}
 
 // std::unique_ptr<FunctionAST> Parser::parseDefinition();
 
@@ -259,10 +328,9 @@ void Parser::mainLoop(){
     // case tok_extern:
     //     parseExtern();
     default:
-        auto a = parseExpression();
+        auto a = parseStatement();
         if(a)
             fprintf(stderr, "Parsed Successfully");
-        //parseStatement();
     }
     //}
 }

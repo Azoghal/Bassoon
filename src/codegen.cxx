@@ -31,4 +31,21 @@ llvm::Value *VariableExprAST::codegen(){
     return nullptr;
 }
 
+llvm::Value *BlockStatementAST::codegen(){
+    return nullptr;
+}
+
+llvm::Value *IfStatementAST::codegen(){
+    return nullptr;
+}
+
+llvm::Value *CallStatementAST::codegen(){
+    return nullptr;
+}
+
+llvm::Value *ReturnStatementAST::codegen(){
+    return nullptr;
+}
+
+
 } // namespace bassoon

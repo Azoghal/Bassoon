@@ -116,6 +116,13 @@ public:
     int getCol() const {return loc_.collumn;};
 };
 
+class BlockStatementAST : public StatementAST{
+    std::vector<std::unique_ptr<StatementAST>> statements_;
+public:
+    BlockStatementAST(SourceLoc loc, std::vector<std::unique_ptr<StatementAST>> statements)
+        : StatementAST(loc), statements_(std::move(statements)) {};
+    llvm::Value *codegen() override;
+};
 
 //--------------------------
 // Control Flow Statements
@@ -148,6 +155,14 @@ class WhileStatementAST : public StatementAST {
 public:
     WhileStatementAST(SourceLoc loc, std::unique_ptr<ExprAST> cond, std::unique_ptr<StatementAST> body)
         : StatementAST(loc), cond_(std::move(cond)), body_(std::move(body)) {};
+    llvm::Value *codegen() override;
+};
+
+class ReturnStatementAST : public StatementAST {
+    std::unique_ptr<ExprAST> return_expr_;
+public:
+    ReturnStatementAST(SourceLoc loc, std::unique_ptr<ExprAST> return_expr)
+        : StatementAST(loc), return_expr_(std::move(return_expr)) {};
     llvm::Value *codegen() override;
 };
 
