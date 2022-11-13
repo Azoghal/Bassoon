@@ -68,7 +68,7 @@ public:
 };
 
 //-----------------------
-// Variable Expressions
+// Identifier Expressions
 //-----------------------
 
 // reference
@@ -79,6 +79,15 @@ public:
         : ExprAST(loc), name_(name) {};
     llvm::Value *codegen() override;
     std::string getName() {return name_;};
+};
+
+class CallExprAST : public ExprAST {
+    std::string callee_;
+    std::vector<std::unique_ptr<ExprAST>> args_;
+public:
+    CallExprAST(SourceLoc loc, const std::string &callee, std::vector<std::unique_ptr<ExprAST>> args) 
+        : ExprAST(loc), callee_(callee), args_(std::move(args)) {};
+    llvm::Value *codegen() override;
 };
 
 //-----------------------
@@ -114,14 +123,6 @@ public:
     virtual llvm::Value *codegen() = 0;
     int getLine() const {return loc_.line;};
     int getCol() const {return loc_.collumn;};
-};
-
-class BlockStatementAST : public StatementAST{
-    std::vector<std::unique_ptr<StatementAST>> statements_;
-public:
-    BlockStatementAST(SourceLoc loc, std::vector<std::unique_ptr<StatementAST>> statements)
-        : StatementAST(loc), statements_(std::move(statements)) {};
-    llvm::Value *codegen() override;
 };
 
 //--------------------------
@@ -166,16 +167,15 @@ public:
     llvm::Value *codegen() override;
 };
 
-//-------------------------
-// Function Expressions
-//-------------------------
+// ------------------------
+// Other Statements
+// -----------------------
 
-class CallExprAST : public ExprAST {
-    std::string callee_;
-    std::vector<std::unique_ptr<ExprAST>> args_;
+class BlockStatementAST : public StatementAST{
+    std::vector<std::unique_ptr<StatementAST>> statements_;
 public:
-    CallExprAST(SourceLoc loc, const std::string &callee, std::vector<std::unique_ptr<ExprAST>> args) 
-        : ExprAST(loc), callee_(callee), args_(std::move(args)) {};
+    BlockStatementAST(SourceLoc loc, std::vector<std::unique_ptr<StatementAST>> statements)
+        : StatementAST(loc), statements_(std::move(statements)) {};
     llvm::Value *codegen() override;
 };
 
@@ -186,6 +186,25 @@ public:
         : StatementAST(loc), call_(std::move(call)) {};
     llvm::Value *codegen() override;
 };
+
+class AssignStatementAST : public StatementAST {
+    std::string identifier_;
+    std::unique_ptr<ExprAST> value_;
+public:
+    AssignStatementAST(SourceLoc loc, std::string identifier, std::unique_ptr<ExprAST> value)
+        : StatementAST(loc), identifier_(identifier), value_(std::move(value)) {};
+    llvm::Value *codegen() override;
+};
+
+// class InitStatementAST : public StatementAST{
+//     std::unique_ptr<Assignment
+//     std::unique_ptr<ExprAST> value_;
+// public:
+//     InitStatementAST
+// }
+//-------------------------
+// Function Expressions
+//-------------------------
 
 class PrototypeAST {
     SourceLoc loc_;
@@ -207,8 +226,6 @@ public:
         : proto_(std::move(proto)), body_(std::move(body)) {};
     llvm::Function *codegen();
 };
-
-
 
 } // namespace bassoon
 

@@ -17,6 +17,7 @@ int main(){
     // while(a >= 0)
     //     a = bassoon::Lexer::nextTok(); // skip newline
     // fprintf(stderr, "first token is a %c %s\n", a, bassoon::tokToStr(a).c_str());
+    bassoon::Parser::setVerbosity(1);
     bassoon::Parser::mainLoop();
     a++;
     return 0;

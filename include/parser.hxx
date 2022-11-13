@@ -18,6 +18,7 @@ class Parser{
     static int verbosity_;
 
     static void printParseAndToken(std::string parseFunction);
+    static std::vector<std::unique_ptr<ExprAST>> * parseArgList();
 
     static std::unique_ptr<ExprAST> parseExpression();
     static std::unique_ptr<ExprAST> parseUnary();
@@ -32,12 +33,13 @@ class Parser{
 
     static std::unique_ptr<StatementAST> parseStatement();
     static std::unique_ptr<StatementAST> parseBlockStatement();
-    static std::unique_ptr<StatementAST> parseInitStatement();
-    static std::unique_ptr<StatementAST> parseAssignStatement();
+    static std::unique_ptr<StatementAST> parseIdentifierStatement();
+    static std::unique_ptr<StatementAST> parseCallStatement(SourceLoc id_loc, std::string id);
+    static std::unique_ptr<StatementAST> parseInitStatement(SourceLoc id_loc, std::string id);
+    static std::unique_ptr<StatementAST> parseAssignStatement(SourceLoc id_loc, std::string id);
     static std::unique_ptr<StatementAST> parseIfStatement();
     static std::unique_ptr<StatementAST> parseForStatement();
     static std::unique_ptr<StatementAST> parseWhileStatement();
-    static std::unique_ptr<StatementAST> parseCallStatement();
     static std::unique_ptr<StatementAST> parseReturnStatement();
 
     static std::unique_ptr<FunctionAST> parseDefinition();
