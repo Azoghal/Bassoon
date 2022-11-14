@@ -7,7 +7,7 @@ namespace bassoon
 {
 
 int Parser::current_token_ = ' ';
-std::map<char,int> Parser::bin_op_precedence_ = std::map<char,int>({{'-', 10}, {'+', 20}, {'/', 30}, {'*', 40}});
+std::map<char,int> Parser::bin_op_precedence_ = std::map<char,int>({{'<', 5}, {'-', 10}, {'+', 20}, {'/', 30}, {'*', 40}});
 std::function<int()> Parser::bassoon_nextTok_ = Lexer::nextTok;
 int Parser::verbosity_ = 0;
 
@@ -121,6 +121,7 @@ std::unique_ptr<ExprAST> Parser::parseBinaryOpRHS(int expr_precedence, std::uniq
         int tok_prec = getTokPrecedence(); 
         printParseAndToken("binopCmp");
         if (tok_prec < expr_precedence){
+            fprintf(stderr, "%d < %d\n", tok_prec, expr_precedence);
             // this is not a binop rhs
             printParseAndToken("no more bin.");
             return lhs;
@@ -282,8 +283,8 @@ std::unique_ptr<StatementAST> Parser::parseIdentifierStatement(){
     switch(current_token_){
     case '(':
         return parseCallStatement(id_loc, id);
-    // case tok_of:
-    //     return parseInitStatement(id_loc, id);
+    case tok_of:
+        return parseInitStatement(id_loc, id);
     case '=':
         return parseAssignStatement(id_loc, id);
     default:
@@ -388,12 +389,20 @@ std::unique_ptr<StatementAST> Parser::parseIfStatement(){
         return LogErrorS("Expect if statement to start with tok_if");
     getNextToken(); // consume tok_if
 
+    if(current_token_ != '(')
+        return LogErrorS("Expect if statement condition within parentheses.");
+    getNextToken(); // consume '('
+
     std::unique_ptr<ExprAST> cond;
     std::unique_ptr<StatementAST> then, elsewise;
 
     cond = parseExpression();
-
     printParseAndToken("ifCondParsed");
+
+    if(current_token_ != ')')
+        return LogErrorS("Expected ')' to end condition expression.");
+    getNextToken(); // consume ')'
+
 
     then = parseBlockStatement();
     if(!then)
@@ -409,7 +418,10 @@ std::unique_ptr<StatementAST> Parser::parseIfStatement(){
     return std::make_unique<IfStatementAST>(if_loc, std::move(cond), std::move(then), std::move(elsewise));
 }
 
-// std::unique_ptr<StatementAST> Parser::parseForStatement();
+// std::unique_ptr<StatementAST> Parser::parseForStatement(){
+//     // for (initialisation; comp exp; step statement) block_statement
+// }
+
 // std::unique_ptr<StatementAST> Parser::parseWhileStatement();
 
 std::unique_ptr<StatementAST> Parser::parseReturnStatement(){
