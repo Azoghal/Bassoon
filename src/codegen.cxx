@@ -55,5 +55,12 @@ llvm::Value *InitStatementAST::codegen(){
     return nullptr;
 }
 
+llvm::Value *ForStatementAST::codegen(){
+    return nullptr;
+}
+
+llvm::Value *WhileStatementAST::codegen(){
+    return nullptr;
+}
 
 } // namespace bassoon

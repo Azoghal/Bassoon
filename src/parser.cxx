@@ -121,7 +121,6 @@ std::unique_ptr<ExprAST> Parser::parseBinaryOpRHS(int expr_precedence, std::uniq
         int tok_prec = getTokPrecedence(); 
         printParseAndToken("binopCmp");
         if (tok_prec < expr_precedence){
-            fprintf(stderr, "%d < %d\n", tok_prec, expr_precedence);
             // this is not a binop rhs
             printParseAndToken("no more bin.");
             return lhs;
@@ -250,6 +249,8 @@ std::unique_ptr<StatementAST> Parser::parseStatement(){
         return parseReturnStatement();
     case tok_identifier:
         return parseIdentifierStatement();
+    case tok_for:
+        return parseForStatement();
     default:
         return LogErrorS("Unexpected token to start statement.");
     }
@@ -418,9 +419,50 @@ std::unique_ptr<StatementAST> Parser::parseIfStatement(){
     return std::make_unique<IfStatementAST>(if_loc, std::move(cond), std::move(then), std::move(elsewise));
 }
 
-// std::unique_ptr<StatementAST> Parser::parseForStatement(){
-//     // for (initialisation; comp exp; step statement) block_statement
-// }
+std::unique_ptr<StatementAST> Parser::parseForStatement(){
+    // for (setup identifier statement; comp exp; step identifier statement) block_statement
+    printParseAndToken("for");
+    SourceLoc for_loc = Lexer::getLoc();
+
+    if (current_token_ != tok_for)
+        return LogErrorS("Expected for statement to start with 'for'.");
+    getNextToken(); // consume 'for'
+
+    if(current_token_ != '(')
+        return LogErrorS("Expected '(' to start for loop induction statements.");
+    getNextToken(); // consume '('
+
+    printParseAndToken("forSetup");
+    auto setup_statement = parseIdentifierStatement(); // call(), var of type = val or var = val;
+    if(!setup_statement)
+        return LogErrorS("Error with for loop setup statement");
+    
+    printParseAndToken("forCond");
+    auto condition_expr = parseExpression();
+    if(!condition_expr)
+        return LogErrorS("Error with for loop condition expression");
+
+    // parseExpression doesn't consume ';'
+    if (current_token_ != ';')
+        return LogErrorS("Expected ';' to separate condition expression from step statement.");
+    getNextToken(); // consume ';'
+    
+    printParseAndToken("forStep");
+    auto step_statement = parseIdentifierStatement();
+    if(!step_statement)
+        return LogErrorS("Error with for loop step statement");
+
+    if(current_token_ != ')')
+        return LogErrorS("Expected ')' to end for loop induction statements.");
+    getNextToken(); // consume ')'
+
+    printParseAndToken("forBody");
+    auto body = parseBlockStatement();
+    if(!body)
+        return LogErrorS("Error with for loop body");
+
+    return std::make_unique<ForStatementAST>(for_loc, std::move(setup_statement), std::move(condition_expr),std::move(step_statement), std::move(body));
+}
 
 // std::unique_ptr<StatementAST> Parser::parseWhileStatement();
 

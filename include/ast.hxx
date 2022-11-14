@@ -140,13 +140,13 @@ public:
 
 class ForStatementAST : public StatementAST {
     //std::vector<std::string> ind_var_names;
-    std::string ind_var_name_;
+    //std::string ind_var_name_; takes argument const std::string &ind_var_name;
     //BType ind_var_type_;
     std::unique_ptr<ExprAST> end_;
     std::unique_ptr<StatementAST> start_, step_, body_;
 public:
-    ForStatementAST(SourceLoc loc, const std::string &ind_var_name, std::unique_ptr<StatementAST> start, std::unique_ptr<ExprAST> end, std::unique_ptr<StatementAST> step, std::unique_ptr<StatementAST> body)
-        : StatementAST(loc), ind_var_name_(ind_var_name), start_(std::move(start)), end_(std::move(end)), step_(std::move(step)), body_(std::move(body)) {};
+    ForStatementAST(SourceLoc loc, std::unique_ptr<StatementAST> start, std::unique_ptr<ExprAST> end, std::unique_ptr<StatementAST> step, std::unique_ptr<StatementAST> body)
+        : StatementAST(loc), start_(std::move(start)), end_(std::move(end)), step_(std::move(step)), body_(std::move(body)) {};
     llvm::Value *codegen() override;
 };
 
