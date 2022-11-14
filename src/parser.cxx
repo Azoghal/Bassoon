@@ -251,6 +251,8 @@ std::unique_ptr<StatementAST> Parser::parseStatement(){
         return parseIdentifierStatement();
     case tok_for:
         return parseForStatement();
+    case tok_while:
+        return parseWhileStatement();
     default:
         return LogErrorS("Unexpected token to start statement.");
     }
@@ -464,7 +466,34 @@ std::unique_ptr<StatementAST> Parser::parseForStatement(){
     return std::make_unique<ForStatementAST>(for_loc, std::move(setup_statement), std::move(condition_expr),std::move(step_statement), std::move(body));
 }
 
-// std::unique_ptr<StatementAST> Parser::parseWhileStatement();
+std::unique_ptr<StatementAST> Parser::parseWhileStatement(){
+    // while (expr) statement block
+    printParseAndToken("While");
+    SourceLoc while_loc = Lexer::getLoc();
+    
+    if(current_token_ != tok_while)
+        return LogErrorS("Expect while statement to start with 'while'");
+    getNextToken(); // consume while
+
+    if(current_token_ != '(')
+        return LogErrorS("Expected '(' to start for loop induction statements.");
+    getNextToken(); // consume '('
+
+    printParseAndToken("whileCond");
+    auto condition_expr = parseExpression();
+    if(!condition_expr)
+        return LogErrorS("Error with while loop condition expression");
+    
+    if(current_token_ != ')')
+        return LogErrorS("Expected ')' to end while loop condition expression");
+    getNextToken(); // consume ')'
+
+    auto body = parseBlockStatement();
+    if(!body)
+        return LogErrorS("Error with while loop body");
+    
+    return std::make_unique<WhileStatementAST>(while_loc, std::move(condition_expr), std::move(body));
+}
 
 std::unique_ptr<StatementAST> Parser::parseReturnStatement(){
     printParseAndToken("Return");
