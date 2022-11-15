@@ -40,6 +40,9 @@ enum token {
     tok_or = -22,
     tok_xor = -23,
     tok_nor = -24,
+
+    //extern
+    tok_extern = -25,
 };
 
 static std::string tokToStr(int t){
@@ -81,7 +84,7 @@ static std::string tokToStr(int t){
     }
 }
 
-static int isType(int tok){
+static int tokIsType(int tok){
     if (tok == tok_bool ||
         tok == tok_int ||
         tok == tok_double)
@@ -98,7 +101,6 @@ static BType tokToType(int tok){
     case tok_int: return type_int;
     case tok_double: return type_double;
     }
-
 }
 
 } // end namespace bassoon

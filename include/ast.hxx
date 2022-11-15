@@ -213,21 +213,22 @@ public:
 class PrototypeAST {
     SourceLoc loc_;
     std::string name_;
-    std::vector<std::pair<std::string,int>> args_;
-    int return_type_;
+    std::vector<std::pair<std::string,BType>> args_;
+    BType return_type_;
 public:
-    PrototypeAST(SourceLoc loc, const std::string &name, std::vector<std::pair<std::string,int>> args, int return_type)
+    PrototypeAST(SourceLoc loc, std::string name, std::vector<std::pair<std::string,BType>> args, BType return_type)
         : loc_(loc), name_(name), args_(args), return_type_(return_type) {};
     const std::string &getName() const {return name_;};
     llvm::Function *codegen();
 };
 
 class FunctionAST{
+    SourceLoc loc_;
     std::unique_ptr<PrototypeAST> proto_;
-    std::unique_ptr<ExprAST> body_;
+    std::unique_ptr<StatementAST> body_;
 public:
-    FunctionAST(std::unique_ptr<PrototypeAST> proto, std::unique_ptr<ExprAST> body)
-        : proto_(std::move(proto)), body_(std::move(body)) {};
+    FunctionAST(SourceLoc loc, std::unique_ptr<PrototypeAST> proto, std::unique_ptr<StatementAST> body)
+        : loc_(loc), proto_(std::move(proto)), body_(std::move(body)) {};
     llvm::Function *codegen();
 };
 

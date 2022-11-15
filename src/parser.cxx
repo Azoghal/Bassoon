@@ -347,7 +347,7 @@ std::unique_ptr<StatementAST> Parser::parseInitStatement(SourceLoc id_loc, std::
         return LogErrorS("Expect current token to be tok_of at start of parseInit");
     getNextToken(); // consume of
 
-    if(!isType(current_token_))
+    if(!tokIsType(current_token_))
         return LogErrorS("Expected a type after of in variable initialisation");
     BType type = tokToType(current_token_);
     getNextToken(); // consume type
@@ -514,9 +514,100 @@ std::unique_ptr<StatementAST> Parser::parseReturnStatement(){
     return std::make_unique<ReturnStatementAST>(return_loc, std::move(return_expr));
 }
 
-// std::unique_ptr<FunctionAST> Parser::parseDefinition();
+std::unique_ptr<FunctionAST> Parser::parseDefinition(){
+    // define foo(var of type...) [gives type] as statement block   
+    printParseAndToken("dfntion.");
+    SourceLoc def_loc = Lexer::getLoc();
 
-// std::unique_ptr<PrototypeAST> Parser::parsePrototype();
+    if(current_token_ != tok_define)
+        return LogErrorF("Expect function definition to start with define");
+    getNextToken(); // consume define
+
+    auto proto = parsePrototype();
+    if(!proto)
+        return LogErrorF("Error with function prototype");
+    
+    if(current_token_!=tok_as)
+        return LogErrorF("Expect current token to be tok_as after prototype parse");
+    getNextToken(); // consume tok_as
+
+    auto body = parseBlockStatement();
+    if(!body)
+        return LogErrorF("Error with function body");
+    
+    return std::make_unique<FunctionAST>(def_loc, std::move(proto), std::move(body));
+}
+
+std::unique_ptr<PrototypeAST> Parser::parsePrototype(){
+    // foo([var of type]*) [gives type]
+    printParseAndToken("prototype");
+    SourceLoc proto_loc = Lexer::getLoc();
+
+    std::string function_name;
+    BType return_type;
+
+    std::string arg_name;
+    BType arg_type;
+    std::vector<std::pair<std::string,BType>> args_and_types;
+
+    if(current_token_ != tok_identifier)
+        return LogErrorP("Expected function prototype to start with identifier");
+    function_name = Lexer::getIdentifier();
+    getNextToken(); // consume function name
+
+    if(current_token_ != '(')
+        return LogErrorP("Expected '(' to start function arguments");
+    getNextToken(); // consume '('
+
+    bool expecting_arg = false;
+    while (current_token_ != ')'){
+        // var of type [,]
+        printParseAndToken("protoAList");
+
+        if(current_token_ != tok_identifier)
+            return LogErrorP("Expect arguments in form [identifier of type]");
+        arg_name = Lexer::getIdentifier();
+        getNextToken(); // consume arg name
+
+        if(current_token_ != tok_of)
+            return LogErrorP("Expect [of type] after identifier");
+        getNextToken(); // consume of
+
+        if(!tokIsType(current_token_))
+            return LogErrorP("Expected type for argument");
+        arg_type = tokToType(current_token_);
+        getNextToken(); // consume type
+
+        // Have name and type so add to arg list
+        args_and_types.push_back(std::pair<std::string,BType>(arg_name, arg_type));
+        expecting_arg = false;
+
+        if(current_token_ == ','){
+            expecting_arg = true;
+            getNextToken(); // consume , and expect another argument
+        } 
+
+    }
+    if (expecting_arg)
+        return LogErrorP("Stray ',' at end of argument list");
+    getNextToken(); // consume ')' (guarunteed by loop breaking)
+
+    printParseAndToken("prtoListDone");
+    if(current_token_ == tok_gives){
+        getNextToken(); // consume gives
+        if(!tokIsType(current_token_))
+            return LogErrorP("Expect return type after gives");
+        return_type = tokToType(current_token_);
+    }
+    else if(current_token_ == tok_as){
+        return_type = type_void;
+    }
+    else{
+        return LogErrorP("Expected [gives type] or as ... after args list");
+    }
+
+    return std::make_unique<PrototypeAST>(proto_loc, function_name, args_and_types, return_type);   
+}
 // std::unique_ptr<PrototypeAST> Parser::parseExtern();
 
 
@@ -529,8 +620,8 @@ void Parser::mainLoop(){
             return;
         case 32: // ' '
             getNextToken();
-        // case tok_define;
-        //     parseDefinition();
+        case tok_define:
+            parseDefinition();
         // case tok_extern:
         //     parseExtern();
         default:
