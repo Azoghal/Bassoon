@@ -1,5 +1,5 @@
-#ifndef Bassoon_src_test_utils_HXX
-#define Bassoon_src_test_utils_HXX
+#ifndef Bassoon_src_test_str_utils_HXX
+#define Bassoon_src_test_str_utils_HXX
 
 #include <algorithm> 
 #include <functional> 
@@ -45,4 +45,4 @@ static inline std::string trim_copy(std::string s) {
 }
 
 } // namespace str_utils
-#endif //Bassoon_src_test_utils_HXX
+#endif //Bassoon_src_test_str_utils_HXX

@@ -1,6 +1,8 @@
 #ifndef Bassoon_include_tokens_HXX
 #define Bassoon_include_tokens_HXX
 
+#include "types.hxx"
+
 namespace bassoon{
 
 enum token {
@@ -38,9 +40,12 @@ enum token {
     tok_or = -22,
     tok_xor = -23,
     tok_nor = -24,
+
+    //extern
+    tok_extern = -25,
 };
 
-static std::string tok_to_str(int t){
+static std::string tokToStr(int t){
     switch (t)
     {
     case tok_eof : return "tok_eof";
@@ -79,13 +84,23 @@ static std::string tok_to_str(int t){
     }
 }
 
-static int isType(int tok){
+static int tokIsType(int tok){
     if (tok == tok_bool ||
         tok == tok_int ||
         tok == tok_double)
         return 1;
     else
         return 0;
+}
+
+static BType tokToType(int tok){
+    switch(tok)
+    {
+    default: return not_a_type;
+    case tok_bool: return type_bool;
+    case tok_int: return type_int;
+    case tok_double: return type_double;
+    }
 }
 
 } // end namespace bassoon

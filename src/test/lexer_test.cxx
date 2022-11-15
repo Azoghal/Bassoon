@@ -1,37 +1,28 @@
 #include <iostream>
 #include <functional>
-#include <string.h>
+#include <string>
 
 #include "str_utils.hxx"
 #include "lexer.hxx"
 #include "tokens.hxx"
 #include "lexer_test.hxx"
+#include "test_utils.hxx"
 
-std::string input_string;
-int input_index, input_end;
+namespace bassoon{
+namespace test{
 
-void setup_input_string(std::string input){
-    input_string = input;
-    input_index = 0;
-    input_end = input_string.size();
-}
-
-int mock(){
-    return input_string[input_index++];
-}
-
-std::vector<int> GetLexedTokens(std::string input){
+std::vector<int> getLexedTokens(std::string input){
     //trim and add a newline to stop interference with next test
     str_utils::trim(input);
     input+="\n";
-    setup_input_string(input);
+    utils::setupLexerSourceString(input);
     std::vector<int> result;
-    while(input_index < input_end){
-        int t = bassoon::Lexer::nextTok();
+    while(utils::lexer_source_index < utils::lexer_source_end){
+        int t = Lexer::nextTok();
         result.push_back(t);
     }
     // for(int i : result){
-    //     fprintf(stderr, "%d: %s\n", i, bassoon::tok_to_str(i).c_str());
+    //     fprintf(stderr, "%d: %s\n", i, bassoon::tokToStr(i).c_str());
     // }
     return result;
 }
@@ -42,7 +33,7 @@ int verifyExpectedTokens(std::vector<int> to_check, std::vector<int> expected){
     
     for (int i=0; i<c_size && i<e_size; ++i){
         if (to_check[i] != expected[i]){
-            fprintf(stderr, "Element %d of lexed tokens (%d: %s) differs from expected (%s).\n", i,to_check[i],bassoon::tok_to_str(to_check[i]).c_str(), bassoon::tok_to_str(expected[i]).c_str());
+            fprintf(stderr, "Element %d of lexed tokens (%d: %s) differs from expected (%s).\n", i,to_check[i],bassoon::tokToStr(to_check[i]).c_str(), bassoon::tokToStr(expected[i]).c_str());
             return 1;
         }
     }
@@ -50,10 +41,10 @@ int verifyExpectedTokens(std::vector<int> to_check, std::vector<int> expected){
         fprintf(stderr, "Lexed tokens of size %d differs from expected tokens of size %d\n", c_size, e_size);
         fprintf(stderr,"Lexed\n");
         for(int i : to_check)
-            fprintf(stderr,"%s, ", bassoon::tok_to_str(i).c_str());
+            fprintf(stderr,"%s, ", bassoon::tokToStr(i).c_str());
         fprintf(stderr,"\nExpected\n");
         for(int i : expected)
-            fprintf(stderr,"%s, ", bassoon::tok_to_str(i).c_str());
+            fprintf(stderr,"%s, ", bassoon::tokToStr(i).c_str());
         return 1;
     }
     fprintf(stderr, "pass\n");
@@ -63,7 +54,7 @@ int verifyExpectedTokens(std::vector<int> to_check, std::vector<int> expected){
 int countFailedCases(std::vector<std::string> test_cases, std::vector<int> expected_tokens){
     int tests_failed = 0;
     for (std::string test_case : test_cases){
-        std::vector<int> lexed_tokens = GetLexedTokens(test_case);
+        std::vector<int> lexed_tokens = getLexedTokens(test_case);
         tests_failed += verifyExpectedTokens(lexed_tokens, expected_tokens);
     }
     return tests_failed;
@@ -77,15 +68,13 @@ int countFailedCases(std::vector<std::string> test_cases, std::vector<std::vecto
     }
     int tests_failed = 0;
     for (int i=0; i<test_cases.size(); ++i){
-        std::vector<int> lexed_tokens = GetLexedTokens(test_cases[i]);
+        std::vector<int> lexed_tokens = getLexedTokens(test_cases[i]);
         tests_failed += verifyExpectedTokens(lexed_tokens, expected_tokens_list[i]);
     }
     return tests_failed;
 }
 
-namespace bassoon{
-
-int test::test_immediate_double(){
+int test_immediate_double(){
     fprintf(stderr, "test_immediate_double\n");
     std::vector<std::string> double_examples = {
         "0.1",
@@ -96,7 +85,7 @@ int test::test_immediate_double(){
     return countFailedCases(double_examples, expected_tokens);
 }
 
-int test::test_immediate_int(){
+int test_immediate_int(){
     fprintf(stderr, "test_immediate_int\n");
     std::vector<std::string> int_examples = {
         "0",
@@ -106,7 +95,7 @@ int test::test_immediate_int(){
     return countFailedCases(int_examples, expected_tokens);
 }
 
-int test::test_immediate_bool(){
+int test_immediate_bool(){
     fprintf(stderr, "test_immediate_bool\n");
     std::vector<std::string> int_examples = {
         "false",
@@ -116,7 +105,7 @@ int test::test_immediate_bool(){
     return countFailedCases(int_examples, expected_tokens_list);
 }
 
-int test::test_typed_variables(){
+int test_typed_variables(){
     fprintf(stderr, "test_typed_variables\n");
     std::vector<std::string> typed = {
         "a of int",
@@ -131,7 +120,7 @@ int test::test_typed_variables(){
     return countFailedCases(typed, expected_tokens_list);
 }
 
-int test::test_function_def(){
+int test_function_def(){
     fprintf(stderr, "test_function_def\n");
     std::vector<std::string> equivalent_definitions = {
         "define foo ( a of int ) gives double as { return 0.0 }",
@@ -141,7 +130,7 @@ int test::test_function_def(){
     return countFailedCases(equivalent_definitions, expected_tokens);
 }
 
-int test::test_for_loop(){
+int test_for_loop(){
     fprintf(stderr, "test_for_loop\n");
     std::vector<std::string> equivalent_loops = {
         "for ( a of int = 0; a < 10; a = a +1) { } ",
@@ -151,7 +140,7 @@ int test::test_for_loop(){
     return countFailedCases(equivalent_loops, expected_tokens);
 }
 
-int test::test_while_loop(){
+int test_while_loop(){
     fprintf(stderr, "test_while_loop\n");
     std::vector<std::string> equivalent_loops = {
         "while ( a < 10) {b = b + a;} ",
@@ -161,8 +150,8 @@ int test::test_while_loop(){
     return countFailedCases(equivalent_loops, expected_tokens);
 }
     
-int test::test_lexer(){
-    Lexer::setSource(mock);
+int test_lexer(){
+    utils::setupLexerSource(); // gives mocking getchar to lexer
     test_immediate_int();
     test_immediate_double();
     test_immediate_bool();
@@ -173,4 +162,5 @@ int test::test_lexer(){
     return 0;
 }
 
+} // namespace test
 } // namespace bassoon
