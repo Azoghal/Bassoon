@@ -18,6 +18,7 @@ void Parser::setSource(std::function<int()> source){
 }
 
 int Parser::getNextToken(){
+    printParseAndToken("--");
     return current_token_ = bassoon_nextTok_();
     //return Parser::current_token_ = Lexer::nextTok();
 }
@@ -266,9 +267,12 @@ std::unique_ptr<StatementAST> Parser::parseBlockStatement(){
 
     std::vector<std::unique_ptr<StatementAST>> statements;
     while(current_token_ != '}'){
+        printParseAndToken("start in block");
         statements.push_back(parseStatement());
+        printParseAndToken("sttmnt in block");
     }
 
+    printParseAndToken("} after block");
     getNextToken(); // consume '}'
     return std::make_unique<BlockStatementAST>(block_loc, std::move(statements));
 }
@@ -343,6 +347,8 @@ std::unique_ptr<StatementAST> Parser::parseCallStatement(SourceLoc id_loc, std::
 
 std::unique_ptr<StatementAST> Parser::parseInitStatement(SourceLoc id_loc, std::string id){
     // of type = value;
+    printParseAndToken("Init");
+
     if (current_token_ != tok_of)
         return LogErrorS("Expect current token to be tok_of at start of parseInit");
     getNextToken(); // consume of
@@ -370,17 +376,21 @@ std::unique_ptr<StatementAST> Parser::parseInitStatement(SourceLoc id_loc, std::
 }
 
 std::unique_ptr<StatementAST> Parser::parseAssignStatement(SourceLoc id_loc, std::string id){
+    printParseAndToken("assign");
+    
     if(current_token_ != '=')
-        return LogErrorS("Expected '=' after type in variable initialisation");
+        return LogErrorS("Expected '=' after type in variable assignment");
     getNextToken(); // consume '='
 
     auto value = parseExpression();
     if(!value)
         return LogErrorS("Error with value of assignment");
     
+    printParseAndToken("assign semi");
     if(current_token_ != ';')
-        return LogErrorS("Expected semicolon to end variable initialisation");
+        return LogErrorS("Expected semicolon to end variable assignment");
     getNextToken(); // consume ';'
+    printParseAndToken("as. after se");
 
     return std::make_unique<AssignStatementAST>(id_loc, id, std::move(value));
 }
@@ -617,17 +627,21 @@ void Parser::mainLoop(){
         printParseAndToken("mainLoop");
         switch(current_token_){
         case tok_eof:
+            printParseAndToken("EOF");
             return;
         case 32: // ' '
             getNextToken();
         case tok_define:
-            parseDefinition();
-        // case tok_extern:
-        //     parseExtern();
+            printParseAndToken("define");
+            if(parseDefinition()){
+                fprintf(stderr, "Parsed Definitionn Successfully\n");
+            }
+            break;
         default:
+            printParseAndToken("default");
             auto a = parseStatement();
             if(a)
-                fprintf(stderr, "Parsed Successfully\n");
+                fprintf(stderr, "Parsed Top Level Statement Successfully\n");
         }
     //}
     }

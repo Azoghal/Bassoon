@@ -94,6 +94,16 @@ int test_call_expr(){
     failures += countParserTestFails(source_tokens);
     return failures;
 }
+
+// int test_block_st();
+// int test_call_st();
+// int test_init_st();
+// int test_assign_st();
+// int test_if_st();
+// int test_for_st();
+// int test_while_st();
+// int test_return_str();
+
     
 int test_expressions(){
     test_bool_expr();
@@ -104,6 +114,11 @@ int test_expressions(){
     test_call_expr();
     return 0;
 }
+
+int test_statements();
+
+int test_definitions();
+
 
 int test_parser(){
     utils::setupParserSource();
