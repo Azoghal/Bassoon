@@ -608,6 +608,7 @@ std::unique_ptr<PrototypeAST> Parser::parsePrototype(){
         if(!tokIsType(current_token_))
             return LogErrorP("Expect return type after gives");
         return_type = tokToType(current_token_);
+        getNextToken(); // consume return type;
     }
     else if(current_token_ == tok_as){
         return_type = type_void;

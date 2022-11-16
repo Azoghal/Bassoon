@@ -28,6 +28,8 @@ int test_return_st();
 
 int test_definitions();
 
+int test_definition();
+
 } //namespace bassoon
 } //namespace test
 
