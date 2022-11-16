@@ -49,13 +49,14 @@ class Parser{
 
 public:
     static void setBinopPrecedence(std::map<char,int> precedents);
-    static void mainLoop();
+    static int mainLoop();
     static void setSource(std::function<int()> source);
 
     static void setVerbosity(int verbosity){verbosity_ = verbosity;};
     
     // Only for use in test
     static std::unique_ptr<ExprAST> _testParseExpression(){return parseExpression();};
+    // static std::unique_ptr<StatementAST> _testParseStatement(){return parseStatement();};
     static void _testResetCurrentToken(){current_token_ = ' ';};
 };
 

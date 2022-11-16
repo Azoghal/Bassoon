@@ -621,30 +621,38 @@ std::unique_ptr<PrototypeAST> Parser::parsePrototype(){
 // std::unique_ptr<PrototypeAST> Parser::parseExtern();
 
 
-void Parser::mainLoop(){
-    for(int i =0; i < 5; ++i){
-    // while(true){
+int Parser::mainLoop(){
+    while(true){
         printParseAndToken("mainLoop");
         switch(current_token_){
-        case tok_eof:
-            printParseAndToken("EOF");
-            return;
-        case 32: // ' '
-            getNextToken();
-        case tok_define:
-            printParseAndToken("define");
-            if(parseDefinition()){
-                fprintf(stderr, "Parsed Definitionn Successfully\n");
-            }
-            break;
-        default:
-            printParseAndToken("default");
-            auto a = parseStatement();
-            if(a)
-                fprintf(stderr, "Parsed Top Level Statement Successfully\n");
+            case 32: { // ' '
+                getNextToken();
+                break;
+            };
+            case tok_define: {
+                printParseAndToken("define");
+                auto def = parseDefinition();
+                if(!def)
+                    return 1;
+                if(verbosity_)
+                    fprintf(stderr, "Parsed Definitionn Successfully\n");
+                break;
+            };
+            case tok_eof: {
+                printParseAndToken("EOF");
+                return 0;
+            };
+            default: {
+                printParseAndToken("default");
+                auto statement = parseStatement();
+                if(!statement)
+                    return 1;
+                if(verbosity_)
+                    fprintf(stderr, "Parsed Top Level Statement Successfully\n");
+            };
         }
-    //}
     }
+    return true;
 }
 
 } // namespace bassoon

@@ -17,6 +17,17 @@ int test_call_expr();
 
 int test_statements();
 
+int test_block_st();
+int test_call_st();
+int test_init_st();
+int test_assign_st();
+int test_if_st();
+int test_for_st();
+int test_while_st();
+int test_return_st();
+
+int test_definitions();
+
 } //namespace bassoon
 } //namespace test
 
