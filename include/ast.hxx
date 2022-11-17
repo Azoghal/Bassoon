@@ -8,28 +8,25 @@
 namespace bassoon
 {
 
-// class NodeAST{
-//     SourceLoc loc_;
-// public:
-//     NodeAST(SourceLoc loc) : loc_(loc) {};
-//     virtual ~NodeAST() = default;
-//     virtual llvm::Value *codegen() = 0;
-//     int getLine() const {return loc_.line;};
-//     int getCol() const {return loc_.collumn;};
-// };
+class NodeAST{
+    SourceLoc loc_;
+public:
+    NodeAST(SourceLoc loc) : loc_(loc) {};
+    virtual ~NodeAST() = default;
+    virtual llvm::Value *codegen() = 0;
+    int getLine() const {return loc_.line;};
+    int getCol() const {return loc_.collumn;};
+};
 
 //----------------------
 // Base Expression class
 //----------------------
 
-class ExprAST {
-    SourceLoc loc_;
+class ExprAST : NodeAST{
 public:
-    ExprAST(SourceLoc loc) : loc_(loc) {};
+    ExprAST(SourceLoc loc) : NodeAST(loc) {};
     virtual ~ExprAST() = default;
     virtual llvm::Value *codegen() = 0;
-    int getLine() const {return loc_.line;};
-    int getCol() const {return loc_.collumn;};
 };
 
 //----------------------
@@ -115,14 +112,11 @@ public:
 // Statements
 // -------------------------
 
-class StatementAST{
-    SourceLoc loc_;
+class StatementAST : NodeAST{
 public:
-    StatementAST(SourceLoc loc) : loc_(loc) {};
+    StatementAST(SourceLoc loc) : NodeAST(loc) {};
     virtual ~StatementAST() = default;
     virtual llvm::Value *codegen() = 0;
-    int getLine() const {return loc_.line;};
-    int getCol() const {return loc_.collumn;};
 };
 
 //--------------------------

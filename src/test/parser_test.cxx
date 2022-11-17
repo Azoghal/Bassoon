@@ -221,26 +221,26 @@ int test_definition(){
     int failures = 0;
     std::vector<int> source_tokens;
 
-    source_tokens = 
-    {tok_define, tok_identifier,'(',')',tok_as,
+    source_tokens = {
+    tok_define, tok_identifier,'(',')',tok_as,
         '{',tok_identifier,'=',tok_identifier,';','}',
     tok_eof};
     failures += countParserStatementTestFails(source_tokens); 
 
-    source_tokens = 
-    {tok_define, tok_identifier,'(',tok_identifier,tok_of,tok_bool,')',tok_as,
+    source_tokens = {
+    tok_define, tok_identifier,'(',tok_identifier,tok_of,tok_bool,')',tok_as,
         '{',tok_identifier,'=',tok_identifier,';','}',
     tok_eof};
     failures += countParserStatementTestFails(source_tokens);
 
-    source_tokens = 
-    {tok_define, tok_identifier,'(',tok_identifier,tok_of,tok_bool,',',tok_identifier,tok_of,tok_int,')',tok_as,
+    source_tokens = {
+    tok_define, tok_identifier,'(',tok_identifier,tok_of,tok_bool,',',tok_identifier,tok_of,tok_int,')',tok_as,
         '{',tok_identifier,'=',tok_identifier,';','}',
     tok_eof};
     failures += countParserStatementTestFails(source_tokens);
 
-    source_tokens = 
-    {tok_define, tok_identifier,'(',')',tok_gives,tok_bool,tok_as,
+    source_tokens = {
+    tok_define, tok_identifier,'(',')',tok_gives,tok_bool,tok_as,
         '{',tok_identifier,'=',tok_identifier,';',tok_return, tok_false,';','}',
     tok_eof};
     failures += countParserStatementTestFails(source_tokens); 
