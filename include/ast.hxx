@@ -8,12 +8,54 @@
 namespace bassoon
 {
 
+class BoolExprAST;
+class IntExprAST;
+class DoubleExprAST;
+class VariableExprAST;
+class CallExprAST;
+class UnaryExprAST;
+class BinaryExprAST;
+class IfStatementAST;
+class ForStatementAST;
+class WhileStatementAST;
+class ReturnStatementAST;
+class BlockStatementAST;
+class CallStatementAST;
+class AssignStatementAST;
+class InitStatementAST;
+class PrototypeAST;
+class FunctionAST;
+
+class ASTVisitor{
+
+public:
+    virtual void boolExprAction(BoolExprAST * bool_node) = 0;
+    virtual void intExprAction(IntExprAST * int_node) = 0;
+    virtual void doubleExprAction(DoubleExprAST * double_node) = 0;
+    virtual void variableExprAction(VariableExprAST * variable_node) = 0;
+    virtual void callExprAction(CallExprAST * call_node) = 0;
+    virtual void unaryExprAction(UnaryExprAST * unary_node) = 0;
+    virtual void binaryExprAction(BinaryExprAST * binary_node) = 0;
+    
+    virtual void ifStAction(IfStatementAST * if_node) = 0;
+    virtual void forStAction(ForStatementAST * for_node) = 0;
+    virtual void whileStAction(WhileStatementAST * while_node) = 0;
+    virtual void returnStAction(ReturnStatementAST * return_node) = 0;
+    virtual void blockStAction(BlockStatementAST * block_node) = 0;
+    virtual void callStAction(CallStatementAST * call_node) = 0;
+    virtual void assignStAction(AssignStatementAST * assign_node) = 0;
+    virtual void initStAction(InitStatementAST * init_node) = 0;
+
+    virtual void prototypeAction(PrototypeAST * proto_node) = 0;
+    virtual void functionAction(FunctionAST * func_node) = 0;
+};
+
 class NodeAST{
     SourceLoc loc_;
 public:
     NodeAST(SourceLoc loc) : loc_(loc) {};
     virtual ~NodeAST() = default;
-    virtual llvm::Value *codegen() = 0;
+    virtual void accept(ASTVisitor v) = 0;
     int getLine() const {return loc_.line;};
     int getCol() const {return loc_.collumn;};
 };
@@ -22,7 +64,7 @@ public:
 // Base Expression class
 //----------------------
 
-class ExprAST : NodeAST{
+class ExprAST : public NodeAST{
 public:
     ExprAST(SourceLoc loc) : NodeAST(loc) {};
     virtual ~ExprAST() = default;
@@ -46,6 +88,7 @@ public:
     BoolExprAST(SourceLoc loc, bool value) 
         : ValueExprAST(loc, type_bool), value_(value) {};
     llvm::Value *codegen() override;
+    void accept(ASTVisitor v) override {v.boolExprAction(this);}
 };
 
 class IntExprAST : public ValueExprAST{
@@ -54,6 +97,7 @@ public:
     IntExprAST(SourceLoc loc, int value) 
         : ValueExprAST(loc, type_int), value_(value) {};
     llvm::Value *codegen() override;
+    void accept(ASTVisitor v) override {v.intExprAction(this);}
 };
 
 class DoubleExprAST : public ValueExprAST{
@@ -62,6 +106,7 @@ public:
     DoubleExprAST(SourceLoc loc, double value) 
         : ValueExprAST(loc, type_double), value_(value) {};
     llvm::Value *codegen() override;
+    void accept(ASTVisitor v) override {v.doubleExprAction(this);}
 };
 
 //-----------------------
@@ -75,6 +120,7 @@ public:
     VariableExprAST(SourceLoc loc, const std::string name) 
         : ExprAST(loc), name_(name) {};
     llvm::Value *codegen() override;
+    void accept(ASTVisitor v) override {v.variableExprAction(this);}
     std::string getName() {return name_;};
 };
 
@@ -85,6 +131,7 @@ public:
     CallExprAST(SourceLoc loc, const std::string &callee, std::vector<std::unique_ptr<ExprAST>> args) 
         : ExprAST(loc), callee_(callee), args_(std::move(args)) {};
     llvm::Value *codegen() override;
+    void accept(ASTVisitor v) override {v.callExprAction(this);};
 };
 
 //-----------------------
@@ -98,6 +145,7 @@ public:
     UnaryExprAST(SourceLoc loc, char opcode, std::unique_ptr<ExprAST> operand) 
         : ExprAST(loc), opcode_(opcode), operand_(std::move(operand)) {};
     llvm::Value *codegen() override;
+    void accept(ASTVisitor v) override {v.unaryExprAction(this);};
 };
 
 class BinaryExprAST : public ExprAST {
@@ -107,12 +155,13 @@ public:
     BinaryExprAST(SourceLoc loc, char opcode, std::unique_ptr<ExprAST> lhs, std::unique_ptr<ExprAST> rhs)
         : ExprAST(loc), opcode_(opcode), lhs_(std::move(lhs)), rhs_(std::move(rhs)) {};
     llvm::Value *codegen() override;
+    void accept(ASTVisitor v) override {v.binaryExprAction(this);};
 };
 // -------------------------
 // Statements
 // -------------------------
 
-class StatementAST : NodeAST{
+class StatementAST : public NodeAST{
 public:
     StatementAST(SourceLoc loc) : NodeAST(loc) {};
     virtual ~StatementAST() = default;
@@ -130,6 +179,7 @@ public:
     IfStatementAST(SourceLoc loc, std::unique_ptr<ExprAST> cond, std::unique_ptr<StatementAST> then, std::unique_ptr<StatementAST> elsewise) 
         : StatementAST(loc), cond_(std::move(cond)), then_(std::move(then)), else_(std::move(elsewise)) {};
     llvm::Value *codegen() override;
+    void accept(ASTVisitor v) override {v.ifStAction(this);};
 };
 
 class ForStatementAST : public StatementAST {
@@ -142,6 +192,7 @@ public:
     ForStatementAST(SourceLoc loc, std::unique_ptr<StatementAST> start, std::unique_ptr<ExprAST> end, std::unique_ptr<StatementAST> step, std::unique_ptr<StatementAST> body)
         : StatementAST(loc), start_(std::move(start)), end_(std::move(end)), step_(std::move(step)), body_(std::move(body)) {};
     llvm::Value *codegen() override;
+    void accept(ASTVisitor v) override {v.forStAction(this);};
 };
 
 class WhileStatementAST : public StatementAST {
@@ -151,6 +202,7 @@ public:
     WhileStatementAST(SourceLoc loc, std::unique_ptr<ExprAST> cond, std::unique_ptr<StatementAST> body)
         : StatementAST(loc), cond_(std::move(cond)), body_(std::move(body)) {};
     llvm::Value *codegen() override;
+    void accept(ASTVisitor v) override {v.whileStAction(this);};
 };
 
 class ReturnStatementAST : public StatementAST {
@@ -159,6 +211,7 @@ public:
     ReturnStatementAST(SourceLoc loc, std::unique_ptr<ExprAST> return_expr)
         : StatementAST(loc), return_expr_(std::move(return_expr)) {};
     llvm::Value *codegen() override;
+    void accept(ASTVisitor v) override {v.returnStAction(this);};
 };
 
 // ------------------------
@@ -171,6 +224,7 @@ public:
     BlockStatementAST(SourceLoc loc, std::vector<std::unique_ptr<StatementAST>> statements)
         : StatementAST(loc), statements_(std::move(statements)) {};
     llvm::Value *codegen() override;
+    void accept(ASTVisitor v) override {v.blockStAction(this);};
 };
 
 class CallStatementAST : public StatementAST {
@@ -179,6 +233,7 @@ public:
     CallStatementAST(SourceLoc loc, std::unique_ptr<CallExprAST> call)
         : StatementAST(loc), call_(std::move(call)) {};
     llvm::Value *codegen() override;
+    void accept(ASTVisitor v) override {v.callStAction(this);};
 };
 
 class AssignStatementAST : public StatementAST {
@@ -188,6 +243,7 @@ public:
     AssignStatementAST(SourceLoc loc, std::string identifier, std::unique_ptr<ExprAST> value)
         : StatementAST(loc), identifier_(identifier), value_(std::move(value)) {};
     llvm::Value *codegen() override;
+    void accept(ASTVisitor v) override {v.assignStAction(this);};
 };
 
 class InitStatementAST : public StatementAST{
@@ -198,32 +254,33 @@ public:
     InitStatementAST(SourceLoc loc, std::string identifier, BType var_type, std::unique_ptr<AssignStatementAST> assignment)
         : StatementAST(loc), identifier_(identifier), var_type_(var_type), assignment_(std::move(assignment)) {};
     llvm::Value *codegen() override;
+    void accept(ASTVisitor v) override {v.initStAction(this);};
 };
 
 //-------------------------
 // Function Expressions
 //-------------------------
 
-class PrototypeAST {
-    SourceLoc loc_;
+class PrototypeAST : public NodeAST{
     std::string name_;
     std::vector<std::pair<std::string,BType>> args_;
     BType return_type_;
 public:
     PrototypeAST(SourceLoc loc, std::string name, std::vector<std::pair<std::string,BType>> args, BType return_type)
-        : loc_(loc), name_(name), args_(args), return_type_(return_type) {};
+        : NodeAST(loc), name_(name), args_(args), return_type_(return_type) {};
     const std::string &getName() const {return name_;};
     llvm::Function *codegen();
+    void accept(ASTVisitor v) override {v.prototypeAction(this);};
 };
 
-class FunctionAST{
-    SourceLoc loc_;
+class FunctionAST : public NodeAST{
     std::unique_ptr<PrototypeAST> proto_;
     std::unique_ptr<StatementAST> body_;
 public:
     FunctionAST(SourceLoc loc, std::unique_ptr<PrototypeAST> proto, std::unique_ptr<StatementAST> body)
-        : loc_(loc), proto_(std::move(proto)), body_(std::move(body)) {};
+        : NodeAST(loc), proto_(std::move(proto)), body_(std::move(body)) {};
     llvm::Function *codegen();
+    void accept(ASTVisitor v) override {v.functionAction(this);};
 };
 
 } // namespace bassoon

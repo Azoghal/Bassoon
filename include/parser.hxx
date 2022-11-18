@@ -18,7 +18,6 @@ class Parser{
     static int verbosity_;
 
     static void printParseAndToken(std::string parseFunction);
-    static std::vector<std::unique_ptr<ExprAST>> * parseArgList();
 
     static std::unique_ptr<ExprAST> parseExpression();
     static std::unique_ptr<ExprAST> parseUnary();
@@ -49,7 +48,7 @@ class Parser{
 
 public:
     static void setBinopPrecedence(std::map<char,int> precedents);
-    static int mainLoop();
+    static int parseLoop(std::vector<std::unique_ptr<NodeAST>> parsedASTs);
     static void setSource(std::function<int()> source);
 
     static void setVerbosity(int verbosity){verbosity_ = verbosity;};
