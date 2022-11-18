@@ -33,8 +33,8 @@ public:
     void prototypeAction(PrototypeAST * proto_node) override{}
     void functionAction(FunctionAST * func_node) override{}
 
-    void visualiseAST(std::unique_ptr<NodeAST> AST);
-    void visualiseASTs(std::vector<std::unique_ptr<NodeAST>> ASTs);
+    void visualiseAST(std::shared_ptr<NodeAST> AST);
+    void visualiseASTs(std::vector<std::shared_ptr<NodeAST>> ASTs);
 };
 
 } // namespace viz

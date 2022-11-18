@@ -622,7 +622,7 @@ std::unique_ptr<PrototypeAST> Parser::parsePrototype(){
 // std::unique_ptr<PrototypeAST> Parser::parseExtern();
 
 
-int Parser::parseLoop(std::vector<std::unique_ptr<NodeAST>> parsedASTs){
+int Parser::parseLoop(std::vector<std::shared_ptr<NodeAST>> * parsedASTs){
     while(true){
         printParseAndToken("mainLoop");
         switch(current_token_){
@@ -637,15 +637,16 @@ int Parser::parseLoop(std::vector<std::unique_ptr<NodeAST>> parsedASTs){
                     fprintf(stderr,"Error parsing definition\n");
                     return 1;
                 }
-                parsedASTs.push_back(std::move(def));
-                fprintf(stderr,"number of ASTs%lu\n", parsedASTs.size());
+                fprintf(stderr,"going to try pushing\n");
+                parsedASTs->push_back(std::move(def));
+                fprintf(stderr,"number of ASTs%lu\n", parsedASTs->size());
                 if(verbosity_)
                     fprintf(stderr, "Parsed Definitionn Successfully\n");
                 break;
             };
             case tok_eof: {
                 printParseAndToken("EOF");
-                fprintf(stderr,"number of ASTs%lu\n", parsedASTs.size());
+                fprintf(stderr,"number of ASTs%lu\n", parsedASTs->size());
                 return 0;
             };
             default: {
@@ -655,7 +656,7 @@ int Parser::parseLoop(std::vector<std::unique_ptr<NodeAST>> parsedASTs){
                     fprintf(stderr,"Error parsing statement\n");
                     return 1;
                 }
-                parsedASTs.push_back(std::move(statement));
+                parsedASTs->push_back(std::move(statement));
                 if(verbosity_)
                     fprintf(stderr, "Parsed Top Level Statement Successfully\n");
             };

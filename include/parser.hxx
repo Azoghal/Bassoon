@@ -48,7 +48,7 @@ class Parser{
 
 public:
     static void setBinopPrecedence(std::map<char,int> precedents);
-    static int parseLoop(std::vector<std::unique_ptr<NodeAST>> parsedASTs);
+    static int parseLoop(std::vector<std::shared_ptr<NodeAST>> * parsedASTs);
     static void setSource(std::function<int()> source);
 
     static void setVerbosity(int verbosity){verbosity_ = verbosity;};

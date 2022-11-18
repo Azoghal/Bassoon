@@ -7,25 +7,26 @@
 int main(int argc, char *argv[]){
     bassoon::Parser::setVerbosity(1);
 
-    std::vector<std::unique_ptr<bassoon::NodeAST>> ASTs;
-    bassoon::Parser::parseLoop(std::move(ASTs));
+    std::vector<std::shared_ptr<bassoon::NodeAST>>  * ASTs = new std::vector<std::shared_ptr<bassoon::NodeAST>>();
+    bassoon::Parser::parseLoop(ASTs);
     fprintf(stderr,"Parsed successfully\n");
 
     bassoon::viz::VizVisitor visualiser;
     fprintf(stderr,"Made a visualiser\n");
 
-    fprintf(stderr,"size %i\n", ASTs.size());
+    fprintf(stderr,"size %lu\n", ASTs->size());
 
-    std::unique_ptr<bassoon::NodeAST> node = std::move(ASTs.at(ASTs.size()-1));
+    if(ASTs->size() == 0){
+        fprintf(stderr, "no parsed ASTs\n");
+        return 1;
+    }
+    std::shared_ptr<bassoon::NodeAST> node = std::move(ASTs->at(ASTs->size()-1));
     fprintf(stderr,"node successfully\n");
 
-    ASTs.pop_back();
+    ASTs->pop_back();
     fprintf(stderr,"popped successfully\n");
 
-    visualiser.visualiseAST(std::move(ASTs[ASTs.size()-1]));
+    visualiser.visualiseAST(node);
     fprintf(stderr,"ran visualiseAST successfully\n");
-
-    ASTs.pop_back();
-    fprintf(stderr,"Popped successfully\n");
     return 0;
 }
