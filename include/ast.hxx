@@ -89,6 +89,7 @@ public:
         : ValueExprAST(loc, type_bool), value_(value) {};
     llvm::Value *codegen() override;
     void accept(ASTVisitor v) override {v.boolExprAction(this);}
+    bool getValue(){return value_;}
 };
 
 class IntExprAST : public ValueExprAST{
@@ -98,6 +99,7 @@ public:
         : ValueExprAST(loc, type_int), value_(value) {};
     llvm::Value *codegen() override;
     void accept(ASTVisitor v) override {v.intExprAction(this);}
+    bool getValue(){return value_;}
 };
 
 class DoubleExprAST : public ValueExprAST{
@@ -107,6 +109,7 @@ public:
         : ValueExprAST(loc, type_double), value_(value) {};
     llvm::Value *codegen() override;
     void accept(ASTVisitor v) override {v.doubleExprAction(this);}
+    bool getValue(){return value_;}
 };
 
 //-----------------------
@@ -132,6 +135,7 @@ public:
         : ExprAST(loc), callee_(callee), args_(std::move(args)) {};
     llvm::Value *codegen() override;
     void accept(ASTVisitor v) override {v.callExprAction(this);};
+    std::string getName(){return callee_;}
 };
 
 //-----------------------
@@ -146,6 +150,7 @@ public:
         : ExprAST(loc), opcode_(opcode), operand_(std::move(operand)) {};
     llvm::Value *codegen() override;
     void accept(ASTVisitor v) override {v.unaryExprAction(this);};
+    char getOpCode(){return  opcode_;}
 };
 
 class BinaryExprAST : public ExprAST {
