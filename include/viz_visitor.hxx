@@ -11,13 +11,17 @@ namespace viz{
 
 class VizVisitor : public ASTVisitor{
     std::map<std::string, int> unique_namer_map_;
-    // std::vector<std::string> name_stack_;
+    std::vector<std::string> name_stack_;
     std::ofstream output_;
     std::set<std::string> node_base_names_;
     std::string getCurrentName(std::string s);
     void advanceName(std::string s);
     std::string getAndAdvanceName(std::string s);
     void addNodeLabel(std::string name, std::string label);
+    void addNodeChild(std::string parent_name, std::string child_name);
+    void pushName(std::string s);
+    std::string popName(std::string s);
+    std::string popName();
 public:
     VizVisitor();
     ~VizVisitor();
