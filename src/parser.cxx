@@ -637,16 +637,13 @@ int Parser::parseLoop(std::vector<std::shared_ptr<NodeAST>> * parsedASTs){
                     fprintf(stderr,"Error parsing definition\n");
                     return 1;
                 }
-                fprintf(stderr,"going to try pushing\n");
                 parsedASTs->push_back(std::move(def));
-                fprintf(stderr,"number of ASTs%lu\n", parsedASTs->size());
                 if(verbosity_)
                     fprintf(stderr, "Parsed Definitionn Successfully\n");
                 break;
             };
             case tok_eof: {
                 printParseAndToken("EOF");
-                fprintf(stderr,"number of ASTs%lu\n", parsedASTs->size());
                 return 0;
             };
             default: {

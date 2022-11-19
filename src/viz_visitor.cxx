@@ -8,9 +8,9 @@ namespace viz
 {
 
 void VizVisitor::visualiseAST(std::shared_ptr<NodeAST> AST){
-    std::ofstream output("AST_Trees.dot", std::ofstream::out);
+    std::ofstream output("../out/AST_Trees.dot", std::ofstream::out);
     output << "digraph { \n";
-        output << "A->B";
+        output << "A->B\n";
     output << "}";
     output.close();
 }
