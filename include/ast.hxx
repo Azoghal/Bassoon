@@ -130,12 +130,16 @@ public:
 class CallExprAST : public ExprAST {
     std::string callee_;
     std::vector<std::unique_ptr<ExprAST>> args_;
+    int arg_index_ = 0;
 public:
     CallExprAST(SourceLoc loc, const std::string &callee, std::vector<std::unique_ptr<ExprAST>> args) 
         : ExprAST(loc), callee_(callee), args_(std::move(args)) {};
     llvm::Value *codegen() override;
     void accept(ASTVisitor * v) override {v->callExprAction(this);};
     std::string getName(){return callee_;}
+    void resetArgIndex(){arg_index_ = 0;}
+    bool anotherArg(){return arg_index_ < args_.size();}
+    std::shared_ptr<ExprAST> getArg(){return std::move(args_[arg_index_++]);}
 };
 
 //-----------------------
@@ -189,6 +193,9 @@ public:
         : StatementAST(loc), cond_(std::move(cond)), then_(std::move(then)), else_(std::move(elsewise)) {};
     llvm::Value *codegen() override;
     void accept(ASTVisitor * v) override {v->ifStAction(this);};
+    std::shared_ptr<ExprAST> getCond(){return std::move(cond_);};
+    std::shared_ptr<StatementAST> getThen(){return std::move(then_);}
+    std::shared_ptr<StatementAST> getElse(){return std::move(else_);}
 };
 
 class ForStatementAST : public StatementAST {
@@ -202,6 +209,10 @@ public:
         : StatementAST(loc), start_(std::move(start)), end_(std::move(end)), step_(std::move(step)), body_(std::move(body)) {};
     llvm::Value *codegen() override;
     void accept(ASTVisitor * v) override {v->forStAction(this);};
+    std::shared_ptr<ExprAST> getEnd(){return std::move(end_);}
+    std::shared_ptr<StatementAST> getStart(){return std::move(start_);}
+    std::shared_ptr<StatementAST> getStep(){return std::move(step_);}
+    std::shared_ptr<StatementAST> getBody(){return std::move(body_);}
 };
 
 class WhileStatementAST : public StatementAST {
@@ -212,7 +223,8 @@ public:
         : StatementAST(loc), cond_(std::move(cond)), body_(std::move(body)) {};
     llvm::Value *codegen() override;
     void accept(ASTVisitor * v) override {v->whileStAction(this);};
-};
+    std::shared_ptr<ExprAST> getCond(){return std::move(cond_);}
+    std::shared_ptr<StatementAST> getBody(){return std::move(body_);}};
 
 class ReturnStatementAST : public StatementAST {
     std::unique_ptr<ExprAST> return_expr_;
@@ -221,6 +233,7 @@ public:
         : StatementAST(loc), return_expr_(std::move(return_expr)) {};
     llvm::Value *codegen() override;
     void accept(ASTVisitor * v) override {v->returnStAction(this);};
+    std::shared_ptr<ExprAST> getReturnExpr(){return std::move(return_expr_);}
 };
 
 // ------------------------
@@ -229,11 +242,15 @@ public:
 
 class BlockStatementAST : public StatementAST{
     std::vector<std::unique_ptr<StatementAST>> statements_;
+    int statement_index_ = 0;
 public:
     BlockStatementAST(SourceLoc loc, std::vector<std::unique_ptr<StatementAST>> statements)
         : StatementAST(loc), statements_(std::move(statements)) {};
     llvm::Value *codegen() override;
     void accept(ASTVisitor * v) override {v->blockStAction(this);};
+    void resetStatementIndex(){statement_index_=0;}
+    bool anotherStatement(){fprintf(stderr,"another%lu\n",statements_.size());return statement_index_ < statements_.size();};
+    std::shared_ptr<StatementAST> getStatement(){return std::move(statements_[statement_index_++]);}
 };
 
 class CallStatementAST : public StatementAST {
@@ -243,6 +260,7 @@ public:
         : StatementAST(loc), call_(std::move(call)) {};
     llvm::Value *codegen() override;
     void accept(ASTVisitor * v) override {v->callStAction(this);};
+    std::shared_ptr<CallExprAST> getCall(){return std::move(call_);}
 };
 
 class AssignStatementAST : public StatementAST {
@@ -266,6 +284,9 @@ public:
         : StatementAST(loc), identifier_(identifier), var_type_(var_type), assignment_(std::move(assignment)) {};
     llvm::Value *codegen() override;
     void accept(ASTVisitor * v) override {v->initStAction(this);};
+    std::string getIdentifier(){return identifier_;}
+    BType getType(){return var_type_;}
+    std::shared_ptr<AssignStatementAST> getAssignment(){return std::move(assignment_);}
 };
 
 //-------------------------
