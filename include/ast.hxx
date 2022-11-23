@@ -303,6 +303,8 @@ public:
     const std::string &getName() const {return name_;};
     llvm::Function *codegen();
     void accept(ASTVisitor * v) override {v->prototypeAction(this);};
+    const std::vector<std::pair<std::string,BType>> & getArgs(){return args_;};
+    const BType & getRetType(){return return_type_;}
 };
 
 class FunctionAST : public NodeAST{
@@ -313,6 +315,8 @@ public:
         : NodeAST(loc), proto_(std::move(proto)), body_(std::move(body)) {};
     llvm::Function *codegen();
     void accept(ASTVisitor * v) override {v->functionAction(this);};
+    std::shared_ptr<PrototypeAST> getProto(){return std::move(proto_);};
+    std::shared_ptr<StatementAST> getBody(){return std::move(body_);};
 };
 
 } // namespace bassoon

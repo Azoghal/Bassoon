@@ -8,7 +8,7 @@ namespace viz
 
 VizVisitor::VizVisitor(){
     output_ = std::ofstream("../out/AST_Trees.dot", std::ofstream::out);
-    node_base_names_ = std::set<std::string>({"Init","Bool","Int","Double","intType","boolType","doubleType","Var","Assign"});
+    node_base_names_ = std::set<std::string>({"Init","Bool","Int","Double","intType","boolType","doubleType","Var","Assign","Func","Proto","ProtoArg","ProtoRet","Block", "Binary"});
 }
 
 VizVisitor::~VizVisitor(){
@@ -335,8 +335,45 @@ void VizVisitor::initStAction(InitStatementAST * init_node) {
 // Miscellaneous Actions
 //-----------------
 
-void VizVisitor::prototypeAction(PrototypeAST * proto_node) {}
-void VizVisitor::functionAction(FunctionAST * func_node) {}
+void VizVisitor::prototypeAction(PrototypeAST * proto_node) {
+    std::string proto_name = getAndAdvanceName("Proto");
+    pushName(proto_name);
+    std::string func_name = proto_node->getName();
+    std::vector<std::pair<std::string, BType>> proto_args = proto_node->getArgs();
+    addNodeLabel(proto_name, func_name);
+
+    std::string arg_name, arg_str;
+    for(auto pair : proto_args){
+        arg_name = getAndAdvanceName("ProtoArg");
+        arg_str = pair.first + ": " +typeToStr(pair.second);
+        addNodeLabel(arg_name, arg_str);
+        addNodeChild(proto_name, arg_name);
+    }
+    BType ret_type = proto_node->getRetType();
+    if (ret_type != type_void){
+        std::string ret_name = getAndAdvanceName("ProtoRet");
+        std::string ret_str = "return: " + typeToStr(proto_node->getRetType());
+        addNodeLabel(ret_name, ret_str);
+        addNodeChild(proto_name, ret_name);
+    }
+}
+
+void VizVisitor::functionAction(FunctionAST * func_node) {
+    std::string function_name = getAndAdvanceName("Func");
+
+    std::shared_ptr<PrototypeAST> proto_node = func_node->getProto();
+    std::string identifier_str = proto_node->getName();
+    addNodeLabel(function_name, "define "+identifier_str);
+
+    proto_node->accept(this);
+    std::string proto_name = popName();
+    addNodeChild(function_name, proto_name);
+
+    std::shared_ptr<StatementAST> body_node = func_node->getBody();
+    body_node->accept(this);
+    std::string body_name = popName();
+    addNodeChild(function_name, body_name);
+}
 
 } // namespace viz
 
