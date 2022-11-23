@@ -14,6 +14,7 @@ class VizVisitor : public ASTVisitor{
     std::vector<std::string> name_stack_;
     std::ofstream output_;
     std::set<std::string> node_base_names_;
+    int verbosity_ = 0;
     std::string getCurrentName(std::string s);
     void advanceName(std::string s);
     std::string getAndAdvanceName(std::string s);

@@ -12,7 +12,9 @@ VizVisitor::VizVisitor(){
 }
 
 VizVisitor::~VizVisitor(){
-    fprintf(stderr,"closing file\n");
+    if(verbosity_){
+        fprintf(stderr,"closing file\n");
+    }
     output_ << std::endl;
     output_.close();
 }
@@ -39,7 +41,7 @@ std::string VizVisitor::getCurrentName(std::string s){
     std::set<std::string>::iterator it = node_base_names_.find(s);
 
     if(it == node_base_names_.end()){
-        fprintf(stderr,"Node name not in known set, possible typo: %s\n", s.c_str());
+        if(verbosity_) fprintf(stderr,"Node name not in known set, possible typo: %s\n", s.c_str());
     }
     int unique = unique_namer_map_[s];
     return s + std::to_string(unique);
@@ -53,7 +55,7 @@ std::string VizVisitor::getAndAdvanceName(std::string s){
     std::set<std::string>::iterator it = node_base_names_.find(s);
 
     if(it == node_base_names_.end()){
-        fprintf(stderr,"Node name not in known set, possible typo: %s\n", s.c_str());
+        if(verbosity_) fprintf(stderr,"Node name not in known set, possible typo: %s\n", s.c_str());
     }
     int unique = unique_namer_map_[s]++;
     return s + std::to_string(unique);
@@ -77,31 +79,22 @@ void VizVisitor::addNodeChild(std::string parent_name, std::string child_name){
 
 void VizVisitor::pushName(std::string s){
     name_stack_.push_back(s);
-    fprintf(stderr, "-----pushed----\n");
-    for (std::string s : name_stack_){
-        fprintf(stderr,"%s\n",s.c_str());
+    if(verbosity_){
+        fprintf(stderr, "-----pushed----\n");
+        for (std::string s : name_stack_){
+            fprintf(stderr,"%s\n",s.c_str());
+        }
     }
-}
-
-std::string VizVisitor::popName(std::string s){
-    std::string to_pop = name_stack_.at(name_stack_.size()-1);
-    if (to_pop != s){
-        fprintf(stderr,"Name popped off (%s) did not match passed name (%s)", to_pop.c_str(), s.c_str());
-    }
-    name_stack_.pop_back();
-    fprintf(stderr, "-----popped----\n");
-    for (std::string s : name_stack_){
-        fprintf(stderr,"%s\n",s.c_str());
-    }
-    return to_pop;
 }
 
 std::string VizVisitor::popName(){
     std::string to_pop = name_stack_.at(name_stack_.size()-1);
     name_stack_.pop_back();
-    fprintf(stderr, "-----popped----\n");
-    for (std::string s : name_stack_){
-        fprintf(stderr,"%s\n",s.c_str());
+    if (verbosity_) {
+        fprintf(stderr, "-----popped----\n");
+        for (std::string s : name_stack_){
+            fprintf(stderr,"%s\n",s.c_str());
+        }
     }
     return to_pop;
 }
@@ -325,9 +318,8 @@ void VizVisitor::initStAction(InitStatementAST * init_node) {
     addNodeChild(init_name, type_node_name);
 
     std::shared_ptr<AssignStatementAST> assign_node = init_node->getAssignment();
-    std::string expected_assign_name = getCurrentName("Assign");
     assign_node->accept(this);
-    std::string assign_node_name = popName(expected_assign_name);
+    std::string assign_node_name = popName();
     addNodeChild(init_name, assign_node_name);
 }
 
