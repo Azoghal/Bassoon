@@ -15,6 +15,8 @@ include_directories(include)
 
 add_subdirectory(src)
 
+make_directory(out)
+
 #add_executable(bassoon src/bassoon.cxx src/lexer.cxx src/parser.cxx)
 
 #configure_file(source_name destination_name COPYONLY)
