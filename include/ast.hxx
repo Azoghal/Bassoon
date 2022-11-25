@@ -65,9 +65,19 @@ public:
 //----------------------
 
 class ExprAST : public NodeAST{
+    BType type_;
 public:
-    ExprAST(SourceLoc loc) : NodeAST(loc) {};
+    ExprAST(SourceLoc loc, BType type) : NodeAST(loc), type_(type) {};
+    ExprAST(SourceLoc loc) : NodeAST(loc), type_(type_unknown) {};
     virtual ~ExprAST() = default;
+    const BType & getType(){return type_;}
+    void setType(BType known_type){
+        if (type_ == type_unknown && known_type >= 0){// >= 0 includes void...
+            type_ = known_type;
+        } else{
+            fprintf(stderr,"Tried to overwrite known type\n");
+        }
+    }
 };
 
 //----------------------
@@ -75,10 +85,10 @@ public:
 //----------------------
 
 class ValueExprAST : public ExprAST {
-    BType type_;
+    // REDUNDANT
 public: 
     ValueExprAST(SourceLoc loc, BType type)
-        : ExprAST(loc), type_(type) {};
+        : ExprAST(loc, type) {};
 };
 
 class BoolExprAST : public ValueExprAST {
