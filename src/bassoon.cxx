@@ -10,7 +10,6 @@ int main(int argc, char *argv[]){
     std::vector<std::shared_ptr<bassoon::NodeAST>>  * ASTs = new std::vector<std::shared_ptr<bassoon::NodeAST>>();
     bassoon::Parser::parseLoop(ASTs);
 
-
     if(ASTs->size() == 0){
         fprintf(stderr, "no parsed ASTs\n");
         return 1;
