@@ -14,6 +14,17 @@ enum BType {
     type_double = 3,
 };
 
+class BFType{
+    std::vector<BType> argument_types_;
+    BType return_type_;
+public:
+    BFType(std::vector<BType> argument_types, BType return_type) 
+        : argument_types_(argument_types), return_type_(return_type) {}
+    const std::vector<BType> & getArgumentTypes(){return argument_types_;}
+    const BType & getReturnType(){return return_type_;}
+    int getArgCount(){return argument_types_.size();}
+};
+
 static std::string typeToStr(int t){
     switch (t)
     {
