@@ -556,6 +556,8 @@ std::unique_ptr<PrototypeAST> Parser::parsePrototype(){
     std::string function_name;
     BType return_type;
 
+    std::vector<BType> func_arg_types;
+
     std::string arg_name;
     BType arg_type;
     std::vector<std::pair<std::string,BType>> args_and_types;
@@ -590,6 +592,7 @@ std::unique_ptr<PrototypeAST> Parser::parsePrototype(){
 
         // Have name and type so add to arg list
         args_and_types.push_back(std::pair<std::string,BType>(arg_name, arg_type));
+        func_arg_types.push_back(arg_type);
         expecting_arg = false;
 
         if(current_token_ == ','){
@@ -617,7 +620,8 @@ std::unique_ptr<PrototypeAST> Parser::parsePrototype(){
         return LogErrorP("Expected [gives type] or as ... after args list");
     }
 
-    return std::make_unique<PrototypeAST>(proto_loc, function_name, args_and_types, return_type);   
+    BFType func_type(func_arg_types,return_type);
+    return std::make_unique<PrototypeAST>(proto_loc, function_name, args_and_types, func_type);   
 }
 // std::unique_ptr<PrototypeAST> Parser::parseExtern();
 

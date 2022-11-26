@@ -15,7 +15,7 @@ enum BType {
 };
 
 class BFType{
-    std::vector<BType> argument_types_;
+    std::vector<BType> argument_types_; // can be const/final? 
     BType return_type_;
 public:
     BFType(std::vector<BType> argument_types, BType return_type) 

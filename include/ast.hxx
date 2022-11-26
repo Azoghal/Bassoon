@@ -289,14 +289,15 @@ public:
 class PrototypeAST : public NodeAST{
     std::string name_;
     std::vector<std::pair<std::string,BType>> args_;
-    BType return_type_;
+    BFType func_type_;
 public:
-    PrototypeAST(SourceLoc loc, std::string name, std::vector<std::pair<std::string,BType>> args, BType return_type)
-        : NodeAST(loc), name_(name), args_(args), return_type_(return_type) {};
+    PrototypeAST(SourceLoc loc, std::string name, std::vector<std::pair<std::string,BType>> args, BFType func_type)
+        : NodeAST(loc), name_(name), args_(args), func_type_(func_type) {};
     const std::string &getName() const {return name_;};
     void accept(ASTVisitor * v) override {v->prototypeAction(this);};
     const std::vector<std::pair<std::string,BType>> & getArgs(){return args_;};
-    const BType & getRetType(){return return_type_;}
+    const BType & getRetType(){return func_type_.getReturnType();}
+    const BFType & getType(){return func_type_;}
 };
 
 class FunctionAST : public NodeAST{
@@ -308,6 +309,7 @@ public:
     void accept(ASTVisitor * v) override {v->functionAction(this);};
     std::shared_ptr<PrototypeAST> getProto(){return std::move(proto_);};
     std::shared_ptr<StatementAST> getBody(){return std::move(body_);};
+    const BFType & getType(){return proto_->getType();}
 };
 
 } // namespace bassoon
