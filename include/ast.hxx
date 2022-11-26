@@ -58,6 +58,10 @@ public:
     virtual void accept(ASTVisitor * v) = 0;
     int getLine() const {return loc_.line;};
     int getCol() const {return loc_.collumn;};
+    std::string getLocStr(){
+        std::string formatted_loc = "{" + std::to_string(loc_.line) + ":" + std::to_string(loc_.collumn) + "}";
+        return formatted_loc;
+    }
 };
 
 //----------------------

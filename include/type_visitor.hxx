@@ -12,13 +12,16 @@ namespace typecheck{
 class TypeVisitor : public ASTVisitor{
     // a map of identifier name -> stack of types (allowing ghosting)
     std::map<std::string, std::vector<BType>> identifier_stacks_;
+    std::map<std::string, BFType> func_types_;
     // scope_definitions_stack_: a stack of info about scopes - 
     // the identifiers that are defined in them, that need to be 
     // popped off identifier_stacks_ when the scope closes.
     std::vector<std::vector<std::string>> scope_definitions_stack;
 
     BType typeContext(std::string identifier); // get the type of an identifier in current scope.
-    BType funcContext(std::string func_name); // need a new return type?? would probs help in all sorts of places
+    BFType funcContext(std::string func_name); // need a new return type?? would probs help in all sorts of places
+    bool varIsDefined(std::string identifier);
+    bool funcIsDefined(std::string func_name);
 public:
     TypeVisitor();
     ~TypeVisitor();
