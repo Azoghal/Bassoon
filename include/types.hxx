@@ -6,9 +6,9 @@
 namespace bassoon{
 
 enum BType {
-    type_unknown = -2,
+    type_void = -2,
     not_a_type = -1,
-    type_void = 0,
+    type_unknown = 0,
     type_bool = 1,
     type_int = 2,
     type_double = 3,
