@@ -19,6 +19,14 @@ void typingMessage(std::string message, std::string var_or_func_name, std::strin
     fprintf(stderr, "%s: %s at %s", message.c_str(), var_or_func_name.c_str(), loc_str.c_str());
 }
 
+//------------------------------
+// Public Driving Function
+//------------------------------
+
+void TypeVisitor::typecheckAST(std::shared_ptr<NodeAST> node){
+    node->accept(this);
+}
+
 //-----------------------------------------
 // Variable and Function Context helpers
 //-----------------------------------------

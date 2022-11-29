@@ -2,6 +2,7 @@
 #include "parser.hxx"
 #include "tokens.hxx"
 #include "viz_visitor.hxx"
+#include "type_visitor.hxx"
 #include <iostream>
 
 int main(int argc, char *argv[]){
@@ -19,5 +20,8 @@ int main(int argc, char *argv[]){
 
     bassoon::viz::VizVisitor visualiser;
     visualiser.visualiseAST(node);
+
+    bassoon::typecheck::TypeVisitor typechecker;
+    typechecker.typecheckAST(node);
     return 0;
 }

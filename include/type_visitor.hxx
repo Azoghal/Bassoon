@@ -35,8 +35,6 @@ class TypeVisitor : public ASTVisitor{
 
     void printVarScopes();
 public:
-    TypeVisitor();
-    ~TypeVisitor();
     void boolExprAction(BoolExprAST * bool_node) override;
     void intExprAction(IntExprAST * int_node) override;
     void doubleExprAction(DoubleExprAST * double_node) override;
@@ -57,7 +55,7 @@ public:
     void prototypeAction(PrototypeAST * proto_node) override;
     void functionAction(FunctionAST * func_node) override;
 
-    void typeCheckAST(NodeAST * node);
+    void typecheckAST(std::shared_ptr<NodeAST> node);
 };
 
 } // namespace typecheck
