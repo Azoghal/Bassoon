@@ -27,10 +27,13 @@ class TypeVisitor : public ASTVisitor{
     BFType funcContext(std::string func_name); // need a new return type?? would probs help in all sorts of places
     void addTypeContext(std::string identifier, BType type){identifier_stacks_[identifier].push_back(type);}
     void addFuncContext(std::string func_name, BFType type){func_types_[func_name] = type;}
+    bool isInFuncContext(std::string candidate_f){for (auto f: func_types_){if(f.first==candidate_f){return true;}}return false;}
 
     void addVarDefinition(std::string identifier, BType type){pushToCurrentScope(identifier); addTypeContext(identifier, type);}
     bool varIsDefined(std::string identifier);
     bool funcIsDefined(std::string func_name);
+
+    void printVarScopes();
 public:
     TypeVisitor();
     ~TypeVisitor();

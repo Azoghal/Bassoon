@@ -63,9 +63,13 @@ std::vector<std::string> TypeVisitor::getCurrentScope(){
 }
 
 std::vector<std::string> TypeVisitor::popCurrentScope(){
-    auto temp = getCurrentScope();
+    auto old_scope_vars = getCurrentScope();
     scope_definitions_stack_.pop_back();
-    return temp;
+    // remove any definitions made in the scope popped.
+    for (auto old_scope_var : old_scope_vars){
+        identifier_stacks_[old_scope_var].pop_back();
+    }
+    return old_scope_vars;
 }
 
 void TypeVisitor::pushNewScope(std::vector<std::string> new_scope){
@@ -84,6 +88,31 @@ bool TypeVisitor::isInCurrentScope(std::string candidate_id){
         }
     }
     return false;
+}
+
+
+void TypeVisitor::printVarScopes(){
+    // print all the stacks of identifires
+    int collumns = identifier_stacks_.size();
+    int max_height = 0;
+    for(auto var_stack: identifier_stacks_){
+        if (var_stack.second.size() > max_height){
+            max_height = var_stack.second.size();
+        }
+    }
+    // 5 characters for column, 1 character gap
+    for(int i = max_height-1; i >= 0; --i){
+        for(auto var_stack:identifier_stacks_){
+            if(var_stack.second.size()>i){
+                // stack big enough to print one.
+                fprintf(stderr,"%5s ",typeToStr(var_stack.second[i]).c_str());
+            }
+        }
+        fprintf(stderr,"\n");
+    }
+    for(auto var_stack:identifier_stacks_){
+        fprintf(stderr,"%5s ",var_stack.first.c_str());
+    }
 }
 
 //--------------------
@@ -233,7 +262,33 @@ void TypeVisitor::whileStAction(WhileStatementAST * while_node){}
 void TypeVisitor::returnStAction(ReturnStatementAST * return_node){}
 void TypeVisitor::blockStAction(BlockStatementAST * block_node){}
 void TypeVisitor::callStAction(CallStatementAST * call_node){}
-void TypeVisitor::assignStAction(AssignStatementAST * assign_node){}
+
+void TypeVisitor::assignStAction(AssignStatementAST * assign_node){
+    // var = expr
+    // 1. a in scope definitions
+    std::string assigned_var = assign_node->getIdentifier();
+    if(!varIsDefined(assigned_var)){
+        typingMessage("Assigned variable not defined", assigned_var, assign_node->getLocStr());
+        return; // throw
+    }
+    // var is defined
+    BType defined_type = typeContext(assigned_var);
+
+    // 2. expr types 
+    std::shared_ptr<ExprAST> value_expr = assign_node->getValue();
+    value_expr->accept(this);
+    if(!hasType(value_expr)){
+        typingMessage("Assignment value not well typed", value_expr->getLocStr());
+        return; // throw
+    }
+    BType val_expr_type = value_expr->getType();
+
+    // 3. expr type matches uppermost var definition;
+    if (val_expr_type != defined_type){
+        typingMessage("Variable and expression type do not match", typeToStr(defined_type)+typeToStr(val_expr_type), assign_node->getLocStr());
+        return; // throw
+    }
+}
 
 void TypeVisitor::initStAction(InitStatementAST * init_node){
     // a of type = expr;
@@ -242,7 +297,7 @@ void TypeVisitor::initStAction(InitStatementAST * init_node){
     std::string init_id_str = init_node->getIdentifier();
     if (isInCurrentScope(init_id_str)){
         typingMessage("Identifier previously defined in this scope", init_node->getIdentifier());
-        return;
+        return; //throw
     }
     BType type = init_node->getType();
     // Can safely define for this scope, so add
