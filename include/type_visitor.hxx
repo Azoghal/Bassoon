@@ -29,12 +29,13 @@ class TypeVisitor : public ASTVisitor{
     void addFuncContext(std::string func_name, BFType type){func_types_[func_name] = type;}
     bool isInFuncContext(std::string candidate_f){for (auto f: func_types_){if(f.first==candidate_f){return true;}}return false;}
 
-    void addVarDefinition(std::string identifier, BType type){pushToCurrentScope(identifier); addTypeContext(identifier, type);}
+    void addVarDefinition(std::string identifier, BType type){pushToCurrentScope(identifier); printVarScopes(); addTypeContext(identifier, type);}
     bool varIsDefined(std::string identifier);
     bool funcIsDefined(std::string func_name);
 
     void printVarScopes();
 public:
+    TypeVisitor();
     void boolExprAction(BoolExprAST * bool_node) override;
     void intExprAction(IntExprAST * int_node) override;
     void doubleExprAction(DoubleExprAST * double_node) override;

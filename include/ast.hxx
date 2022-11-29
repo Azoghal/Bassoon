@@ -283,7 +283,7 @@ public:
     void accept(ASTVisitor * v) override {v->initStAction(this);};
     std::string getIdentifier(){return identifier_;}
     BType getType(){return var_type_;}
-    std::shared_ptr<AssignStatementAST> getAssignment(){return std::move(assignment_);}
+    std::shared_ptr<AssignStatementAST> getAssignment(){if(!assignment_){fprintf(stderr,"seems we've thrown the assignment away");};return std::move(assignment_);}
 };
 
 //-------------------------

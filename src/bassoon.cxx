@@ -18,9 +18,12 @@ int main(int argc, char *argv[]){
     std::shared_ptr<bassoon::NodeAST> node = std::move(ASTs->at(ASTs->size()-1));
     ASTs->pop_back();
 
-    bassoon::viz::VizVisitor visualiser;
-    visualiser.visualiseAST(node);
+    fprintf(stderr, "About to visualise\n");
+    bassoon::viz::VizVisitor * visualiser = new bassoon::viz::VizVisitor();
+    visualiser->visualiseAST(node);
+    delete visualiser;
 
+    fprintf(stderr, "About to typecheck\n");
     bassoon::typecheck::TypeVisitor typechecker;
     typechecker.typecheckAST(node);
     return 0;
