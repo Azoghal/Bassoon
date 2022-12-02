@@ -295,8 +295,7 @@ void VizVisitor::assignStAction(AssignStatementAST * assign_node) {
     addNodeLabel(var_name,var_string);
     addNodeChild(assign_name, var_name);
 
-    std::shared_ptr<ExprAST> val_expr_node = assign_node->getValue();
-    val_expr_node->accept(this);
+    assign_node->valueAccept(this);
     std::string val_expr_name = popName();
     addNodeChild(assign_name, val_expr_name);
 }
@@ -317,8 +316,9 @@ void VizVisitor::initStAction(InitStatementAST * init_node) {
     addNodeLabel(type_node_name, type_str);
     addNodeChild(init_name, type_node_name);
 
-    std::shared_ptr<AssignStatementAST> assign_node = init_node->getAssignment();
-    assign_node->accept(this);
+    //std::shared_ptr<AssignStatementAST> assign_node = init_node->getAssignment();
+    //init_node->getAssignment().accept(this);
+    init_node->assignmentAccept(this);
     std::string assign_node_name = popName();
     addNodeChild(init_name, assign_node_name);
 }
@@ -353,16 +353,17 @@ void VizVisitor::prototypeAction(PrototypeAST * proto_node) {
 void VizVisitor::functionAction(FunctionAST * func_node) {
     std::string function_name = getAndAdvanceName("Func");
 
-    std::shared_ptr<PrototypeAST> proto_node = func_node->getProto();
-    std::string identifier_str = proto_node->getName();
+    PrototypeAST proto_node = func_node->getProto();
+    std::string identifier_str = proto_node.getName();
     addNodeLabel(function_name, "define "+identifier_str);
 
-    proto_node->accept(this);
+    proto_node.accept(this);
+    // func_node->acceptProto()
     std::string proto_name = popName();
     addNodeChild(function_name, proto_name);
 
-    std::shared_ptr<StatementAST> body_node = func_node->getBody();
-    body_node->accept(this);
+    StatementAST body_node = func_node->getBody();
+    body_node.accept(this);
     std::string body_name = popName();
     addNodeChild(function_name, body_name);
 }

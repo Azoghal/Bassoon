@@ -140,12 +140,12 @@ void TypeVisitor::printVarScopes(){
 // Typing Helpers
 //--------------------
 
-// bool hasType(ExprAST * node){
-//     if (node->getType() == type_unknown){
-//         return false;
-//     }
-//     return true;
-// }
+bool hasType(ExprAST node){
+    if (node.getType() == type_unknown){
+        return false;
+    }
+    return true;
+}
 
 bool hasType(std::shared_ptr<ExprAST> node){
     if (node->getType() == type_unknown){
@@ -297,13 +297,15 @@ void TypeVisitor::assignStAction(AssignStatementAST * assign_node){
     BType defined_type = typeContext(assigned_var);
 
     // 2. expr types 
-    std::shared_ptr<ExprAST> value_expr = assign_node->getValue();
-    value_expr->accept(this);
+    // std::shared_ptr<ExprAST> value_expr = assign_node->getValue();
+    // value_expr->accept(this);
+    assign_node->valueAccept(this);
+    auto value_expr = assign_node->getValue();
     if(!hasType(value_expr)){
-        typingMessage("Assignment value not well typed", value_expr->getLocStr());
+        typingMessage("Assignment value not well typed", value_expr.getLocStr());
         return; // throw
     }
-    BType val_expr_type = value_expr->getType();
+    BType val_expr_type = value_expr.getType();
 
     // 3. expr type matches uppermost var definition;
     if (val_expr_type != defined_type){
@@ -328,10 +330,12 @@ void TypeVisitor::initStAction(InitStatementAST * init_node){
     addVarDefinition(init_id_str, type);
 
     // 2. expr of type type
-    std::shared_ptr<AssignStatementAST> assign_node = init_node->getAssignment();
+    //std::shared_ptr<AssignStatementAST> assign_node = init_node->getAssignment();
     fprintf(stderr,"calling assign accept within init\n");
     // assign node action either types well or throws
-    assign_node->accept(this);
+    //init_node->getAssignment().accept(this);
+    init_node->getAssignment().getCol();
+    init_node->assignmentAccept(this);
 }
 
 void TypeVisitor::prototypeAction(PrototypeAST * proto_node){}

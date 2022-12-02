@@ -74,6 +74,7 @@ public:
     ExprAST(SourceLoc loc, BType type) : NodeAST(loc), type_(type) {};
     ExprAST(SourceLoc loc) : NodeAST(loc), type_(type_unknown) {};
     virtual ~ExprAST() = default;
+    void accept(ASTVisitor * v) override {}
     const BType & getType(){return type_;}
     void setType(BType known_type){
         if (type_ == type_unknown && known_type >= 0){// >= 0 includes void...
@@ -184,6 +185,7 @@ class StatementAST : public NodeAST{
 public:
     StatementAST(SourceLoc loc) : NodeAST(loc) {};
     virtual ~StatementAST() = default;
+    void accept(ASTVisitor * v) override {};
 };
 
 //--------------------------
@@ -269,8 +271,9 @@ public:
     AssignStatementAST(SourceLoc loc, std::string identifier, std::unique_ptr<ExprAST> value)
         : StatementAST(loc), identifier_(identifier), value_(std::move(value)) {};
     void accept(ASTVisitor * v) override {v->assignStAction(this);};
-    std::string getIdentifier(){return identifier_;}
-    std::shared_ptr<ExprAST> getValue(){return std::move(value_);};
+    const std::string getIdentifier() const {return identifier_;}
+    const ExprAST & getValue() const {return *value_;};
+    void valueAccept(ASTVisitor * v){value_->accept(v);}
 };
 
 class InitStatementAST : public StatementAST{
@@ -281,9 +284,10 @@ public:
     InitStatementAST(SourceLoc loc, std::string identifier, BType var_type, std::unique_ptr<AssignStatementAST> assignment)
         : StatementAST(loc), identifier_(identifier), var_type_(var_type), assignment_(std::move(assignment)) {};
     void accept(ASTVisitor * v) override {v->initStAction(this);};
-    std::string getIdentifier(){return identifier_;}
-    BType getType(){return var_type_;}
-    std::shared_ptr<AssignStatementAST> getAssignment(){if(!assignment_){fprintf(stderr,"seems we've thrown the assignment away");};return std::move(assignment_);}
+    const std::string getIdentifier() const {return identifier_;}
+    const BType getType() const {return var_type_;}
+    const AssignStatementAST &getAssignment() const {if(!assignment_){fprintf(stderr,"seems we've thrown the assignment away");};return *assignment_;}
+    void assignmentAccept(ASTVisitor * v) {assignment_->accept(v);}
 };
 
 //-------------------------
@@ -311,9 +315,11 @@ public:
     FunctionAST(SourceLoc loc, std::unique_ptr<PrototypeAST> proto, std::unique_ptr<StatementAST> body)
         : NodeAST(loc), proto_(std::move(proto)), body_(std::move(body)) {};
     void accept(ASTVisitor * v) override {v->functionAction(this);};
-    std::shared_ptr<PrototypeAST> getProto(){return std::move(proto_);};
-    std::shared_ptr<StatementAST> getBody(){return std::move(body_);};
-    const BFType & getType(){return proto_->getType();}
+    const PrototypeAST & getProto() const {return *proto_;};
+    const StatementAST & getBody() const {return *body_;};
+    const BFType & getType() const {return proto_->getType();}
+    void protoAccept(ASTVisitor * v){proto_->accept(v);}
+    void bodyAccept(ASTVisitor * v){body_->accept(v);}
 };
 
 } // namespace bassoon
