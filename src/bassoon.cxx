@@ -26,5 +26,7 @@ int main(int argc, char *argv[]){
     fprintf(stderr, "About to typecheck\n");
     bassoon::typecheck::TypeVisitor typechecker;
     typechecker.typecheckAST(node);
+
+    fprintf(stderr, "Typecheck completed\n");
     return 0;
 }

@@ -235,13 +235,11 @@ void VizVisitor::whileStAction(WhileStatementAST * while_node) {
     pushName(while_name);
     addNodeLabel(while_name, "while(){...}");
 
-    std::shared_ptr<ExprAST> cond_node = while_node->getCond();
-    cond_node->accept(this);
+    while_node->condAccept(this);
     std::string cond_name = popName();
     addNodeChild(while_name, cond_name);
 
-    std::shared_ptr<StatementAST> body_node = while_node->getBody();
-    body_node->accept(this);
+    while_node->bodyAccept(this);
     std::string body_name = popName();
     addNodeChild(while_name, body_name);
 }
@@ -251,8 +249,7 @@ void VizVisitor::returnStAction(ReturnStatementAST * return_node) {
     addNodeLabel(return_name,"return");
     pushName(return_name);
 
-    std::shared_ptr<ExprAST> expr_node = return_node->getReturnExpr();
-    expr_node->accept(this);
+    return_node->returnExprAccept(this);
     std::string expr_name = popName();
     addNodeChild(return_name, expr_name);
 }
@@ -267,8 +264,7 @@ void VizVisitor::blockStAction(BlockStatementAST * block_node) {
     block_node->resetStatementIndex();
     //fprintf(stderr,"action %i\n",block_node->anotherStatement());
     while (block_node->anotherStatement()){
-        statement_node = block_node->getStatement();
-        statement_node->accept(this);
+        block_node->statementAcceptOnce(this);
         statement_name = popName();
         addNodeChild(block_name,statement_name);
     }
@@ -279,8 +275,7 @@ void VizVisitor::callStAction(CallStatementAST * call_node) {
     pushName(call_name);
     addNodeLabel(call_name,"call");
     
-    std::shared_ptr<CallExprAST> call_expr_node = call_node->getCall();
-    call_expr_node->accept(this);
+    call_node->callAccept(this);
     std::string call_expr_name = popName();
 
     addNodeChild(call_name,call_expr_name);

@@ -227,8 +227,12 @@ public:
     WhileStatementAST(SourceLoc loc, std::unique_ptr<ExprAST> cond, std::unique_ptr<StatementAST> body)
         : StatementAST(loc), cond_(std::move(cond)), body_(std::move(body)) {};
     void accept(ASTVisitor * v) override {v->whileStAction(this);};
-    std::shared_ptr<ExprAST> getCond(){return std::move(cond_);}
-    std::shared_ptr<StatementAST> getBody(){return std::move(body_);}};
+    const ExprAST & getCond() const {return *cond_;}
+    const StatementAST & getBody() const {return *body_;};
+    void condAccept(ASTVisitor * v) {cond_->accept(v);}
+    void bodyAccept(ASTVisitor * v) {body_->accept(v);}
+};
+
 
 class ReturnStatementAST : public StatementAST {
     std::unique_ptr<ExprAST> return_expr_;
@@ -236,7 +240,8 @@ public:
     ReturnStatementAST(SourceLoc loc, std::unique_ptr<ExprAST> return_expr)
         : StatementAST(loc), return_expr_(std::move(return_expr)) {};
     void accept(ASTVisitor * v) override {v->returnStAction(this);};
-    std::shared_ptr<ExprAST> getReturnExpr(){return std::move(return_expr_);}
+    const ExprAST & getReturnExpr() const {return *return_expr_;}
+    void returnExprAccept(ASTVisitor * v) {return_expr_->accept(v);}
 };
 
 // ------------------------
@@ -252,7 +257,8 @@ public:
     void accept(ASTVisitor * v) override {v->blockStAction(this);};
     void resetStatementIndex(){statement_index_=0;}
     bool anotherStatement(){return statement_index_ < statements_.size();};
-    std::shared_ptr<StatementAST> getStatement(){return std::move(statements_[statement_index_++]);}
+    const StatementAST getStatement() {return *statements_[statement_index_++];}
+    void statementAcceptOnce(ASTVisitor *  v){statements_[statement_index_++]->accept(v);}
 };
 
 class CallStatementAST : public StatementAST {
@@ -261,7 +267,8 @@ public:
     CallStatementAST(SourceLoc loc, std::unique_ptr<CallExprAST> call)
         : StatementAST(loc), call_(std::move(call)) {};
     void accept(ASTVisitor * v) override {v->callStAction(this);};
-    std::shared_ptr<CallExprAST> getCall(){return std::move(call_);}
+    const CallExprAST & getCall() const {return *call_;}
+    void callAccept(ASTVisitor * v) {call_->accept(v);}
 };
 
 class AssignStatementAST : public StatementAST {
