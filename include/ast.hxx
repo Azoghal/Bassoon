@@ -75,7 +75,7 @@ public:
     ExprAST(SourceLoc loc) : NodeAST(loc), type_(type_unknown) {};
     virtual ~ExprAST() = default;
     void accept(ASTVisitor * v) override {}
-    const BType & getType(){return type_;}
+    const BType & getType() const {return type_;}
     void setType(BType known_type){
         if (type_ == type_unknown && known_type >= 0){// >= 0 includes void...
             type_ = known_type;
@@ -102,7 +102,7 @@ public:
     BoolExprAST(SourceLoc loc, bool value) 
         : ValueExprAST(loc, type_bool), value_(value) {};
     void accept(ASTVisitor * v) override {v->boolExprAction(this);}
-    bool getValue(){return value_;}
+    bool getValue() const {return value_;}
 };
 
 class IntExprAST : public ValueExprAST{
@@ -111,7 +111,7 @@ public:
     IntExprAST(SourceLoc loc, int value) 
         : ValueExprAST(loc, type_int), value_(value) {};
     void accept(ASTVisitor * v) override {v->intExprAction(this);}
-    bool getValue(){return value_;}
+    bool getValue() const {return value_;}
 };
 
 class DoubleExprAST : public ValueExprAST{
@@ -120,7 +120,7 @@ public:
     DoubleExprAST(SourceLoc loc, double value) 
         : ValueExprAST(loc, type_double), value_(value) {};
     void accept(ASTVisitor * v) override {v->doubleExprAction(this);}
-    bool getValue(){return value_;}
+    bool getValue() const {return value_;}
 };
 
 //-----------------------
@@ -134,7 +134,7 @@ public:
     VariableExprAST(SourceLoc loc, const std::string name) 
         : ExprAST(loc), name_(name) {};
     void accept(ASTVisitor * v) override {v->variableExprAction(this);}
-    std::string getName() {return name_;};
+    const std::string getName() const {return name_;};
 };
 
 class CallExprAST : public ExprAST {
@@ -145,10 +145,11 @@ public:
     CallExprAST(SourceLoc loc, const std::string &callee, std::vector<std::unique_ptr<ExprAST>> args) 
         : ExprAST(loc), callee_(callee), args_(std::move(args)) {};
     void accept(ASTVisitor * v) override {v->callExprAction(this);};
-    std::string getName(){return callee_;}
+    const std::string getName() const {return callee_;}
     void resetArgIndex(){arg_index_ = 0;}
-    bool anotherArg(){return arg_index_ < args_.size();}
-    std::shared_ptr<ExprAST> getArg(){return std::move(args_[arg_index_++]);}
+    bool anotherArg() const {return arg_index_ < args_.size();}
+    const ExprAST & getOneArg(){return *args_[arg_index_++];}
+    void argAcceptOne(ASTVisitor * v){args_[arg_index_++];}
 };
 
 //-----------------------
@@ -163,7 +164,8 @@ public:
         : ExprAST(loc), opcode_(opcode), operand_(std::move(operand)) {};
     void accept(ASTVisitor * v) override {v->unaryExprAction(this);};
     char getOpCode(){return  opcode_;}
-    std::shared_ptr<ExprAST> getOperand(){return std::move(operand_);}
+    const ExprAST & getOperand() const {return *operand_;}
+    void operandAccept(ASTVisitor * v) {operand_->accept(v);}
 };
 
 class BinaryExprAST : public ExprAST {
@@ -173,9 +175,11 @@ public:
     BinaryExprAST(SourceLoc loc, char opcode, std::unique_ptr<ExprAST> lhs, std::unique_ptr<ExprAST> rhs)
         : ExprAST(loc), opcode_(opcode), lhs_(std::move(lhs)), rhs_(std::move(rhs)) {};
     void accept(ASTVisitor * v) override {v->binaryExprAction(this);};
-    char getOpCode(){return opcode_;};
-    std::shared_ptr<ExprAST> getLHS(){return std::move(lhs_);}
-    std::shared_ptr<ExprAST> getRHS(){return std::move(rhs_);}
+    const char getOpCode() const {return opcode_;};
+    const ExprAST & getLHS() const {return *lhs_;}
+    const ExprAST & getRHS() const {return *rhs_;}
+    void lhsAccept(ASTVisitor * v) {lhs_->accept(v);}
+    void rhsAccept(ASTVisitor * v) {rhs_->accept(v);}
 };
 // -------------------------
 // Statements
@@ -199,9 +203,12 @@ public:
     IfStatementAST(SourceLoc loc, std::unique_ptr<ExprAST> cond, std::unique_ptr<StatementAST> then, std::unique_ptr<StatementAST> elsewise) 
         : StatementAST(loc), cond_(std::move(cond)), then_(std::move(then)), else_(std::move(elsewise)) {};
     void accept(ASTVisitor * v) override {v->ifStAction(this);};
-    std::shared_ptr<ExprAST> getCond(){return std::move(cond_);};
-    std::shared_ptr<StatementAST> getThen(){return std::move(then_);}
-    std::shared_ptr<StatementAST> getElse(){return std::move(else_);}
+    const ExprAST & getCond() const {return  *cond_;}
+    const StatementAST & getThen() const {return  *then_;}
+    const StatementAST & getElse() const {return  *else_;}
+    void condAccept(ASTVisitor * v){cond_->accept(v);}
+    void thenAccept(ASTVisitor * v){then_->accept(v);}
+    void elseAccept(ASTVisitor * v){else_->accept(v);}
 };
 
 class ForStatementAST : public StatementAST {
@@ -214,10 +221,14 @@ public:
     ForStatementAST(SourceLoc loc, std::unique_ptr<StatementAST> start, std::unique_ptr<ExprAST> end, std::unique_ptr<StatementAST> step, std::unique_ptr<StatementAST> body)
         : StatementAST(loc), start_(std::move(start)), end_(std::move(end)), step_(std::move(step)), body_(std::move(body)) {};
     void accept(ASTVisitor * v) override {v->forStAction(this);};
-    std::shared_ptr<ExprAST> getEnd(){return std::move(end_);}
-    std::shared_ptr<StatementAST> getStart(){return std::move(start_);}
-    std::shared_ptr<StatementAST> getStep(){return std::move(step_);}
-    std::shared_ptr<StatementAST> getBody(){return std::move(body_);}
+    const ExprAST & getEnd() const {return  *end_;}
+    const StatementAST & getStart() const {return  *start_;}
+    const StatementAST & getStep() const {return  *step_;}
+    const StatementAST & getBody() const {return  *body_;}
+    void endAccept(ASTVisitor * v){end_->accept(v);}
+    void startAccept(ASTVisitor * v){start_->accept(v);}
+    void stepAccept(ASTVisitor * v){step_->accept(v);}
+    void bodyAccept(ASTVisitor * v){body_->accept(v);}
 };
 
 class WhileStatementAST : public StatementAST {
@@ -257,8 +268,8 @@ public:
     void accept(ASTVisitor * v) override {v->blockStAction(this);};
     void resetStatementIndex(){statement_index_=0;}
     bool anotherStatement(){return statement_index_ < statements_.size();};
-    const StatementAST getStatement() {return *statements_[statement_index_++];}
-    void statementAcceptOnce(ASTVisitor *  v){statements_[statement_index_++]->accept(v);}
+    const StatementAST getOneStatement() {return *statements_[statement_index_++];}
+    void statementAcceptOne(ASTVisitor *  v){statements_[statement_index_++]->accept(v);}
 };
 
 class CallStatementAST : public StatementAST {

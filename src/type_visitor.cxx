@@ -203,14 +203,14 @@ void TypeVisitor::unaryExprAction(UnaryExprAST * unary_node) {
     char opcode = unary_node->getOpCode();
     // lookup
 
-    std::shared_ptr<ExprAST> operand = unary_node->getOperand();
-    operand->accept(this);
+    unary_node->operandAccept(this);
+    auto operand = unary_node->getOperand();
     if(!hasType(operand)){
-        typingMessage("Unary operand has unkown type", "", operand->getLocStr());
+        typingMessage("Unary operand has unkown type", "", operand.getLocStr());
         return;
     }
 
-    BType operand_type = operand->getType();
+    BType operand_type = operand.getType();
     std::vector<BFType> possible_types = unary_operators[opcode];
     BType result_type = type_unknown;
 
@@ -236,22 +236,22 @@ void TypeVisitor::binaryExprAction(BinaryExprAST * binary_node) {
     char opcode = binary_node->getOpCode();
     // lookup
 
-    std::shared_ptr<ExprAST> lhs = binary_node->getLHS();
-    lhs->accept(this);
+    binary_node->lhsAccept(this);
+    auto lhs = binary_node->getLHS();
     if(!hasType(lhs)){
-        typingMessage("binary operand lhs has unkown type", "", lhs->getLocStr());
+        typingMessage("binary operand lhs has unkown type", "", lhs.getLocStr());
         return;
     }
 
-    std::shared_ptr<ExprAST> rhs = binary_node->getRHS();
-    rhs->accept(this);
+    binary_node->rhsAccept(this);
+    auto rhs = binary_node->getRHS();
     if(!hasType(rhs)){
-        typingMessage("binary operand rhs has unkown type", "", rhs->getLocStr());
+        typingMessage("binary operand rhs has unkown type", "", rhs.getLocStr());
         return;
     }
 
-    BType lhs_type = lhs->getType();
-    BType rhs_type = rhs->getType();
+    BType lhs_type = lhs.getType();
+    BType rhs_type = rhs.getType();
     BType result_type = type_unknown;
     std::vector<BFType> possible_types = binary_operators[opcode];
 

@@ -142,8 +142,7 @@ void VizVisitor::callExprAction(CallExprAST * call_node) {
     std::shared_ptr<ExprAST> arg_node;
     std::string arg_name;
     while(call_node->anotherArg()){
-        arg_node = call_node->getArg();
-        arg_node->accept(this);
+        call_node->argAcceptOne(this);
         arg_name = popName();
         addNodeChild(call_name, arg_name);
     }
@@ -155,8 +154,7 @@ void VizVisitor::unaryExprAction(UnaryExprAST * unary_node) {
     std::string op_char = std::string(1, unary_node->getOpCode());
     addNodeLabel(unary_name, op_char);
 
-    std::shared_ptr<ExprAST> operand_node = unary_node->getOperand();
-    operand_node->accept(this);
+    unary_node->operandAccept(this);
     std::string operand_name = popName(); 
 
     addNodeChild(unary_name, operand_name);
@@ -168,13 +166,11 @@ void VizVisitor::binaryExprAction(BinaryExprAST * binary_node) {
     std::string op_char = std::string(1, binary_node->getOpCode());
     addNodeLabel(binary_name, op_char);
 
-    std::shared_ptr<ExprAST> lhs = binary_node->getLHS();
-    lhs->accept(this);
+    binary_node->lhsAccept(this);
     std::string lhs_name = popName();
     addNodeChild(binary_name, lhs_name);
 
-    std::shared_ptr<ExprAST> rhs = binary_node->getRHS();
-    rhs->accept(this);
+    binary_node->rhsAccept(this);
     std::string rhs_name = popName();
     addNodeChild(binary_name, rhs_name);
 }
@@ -188,18 +184,15 @@ void VizVisitor::ifStAction(IfStatementAST * if_node) {
     addNodeLabel(if_name,"if");
     pushName(if_name);
     
-    std::shared_ptr<ExprAST> cond_node = if_node->getCond();
-    cond_node->accept(this);
+    if_node->condAccept(this);
     std::string cond_name = popName();
     addNodeChild(if_name, cond_name);
 
-    std::shared_ptr<StatementAST> then_node = if_node->getThen();
-    then_node->accept(this);
+    if_node->thenAccept(this);
     std::string then_name = popName();
     addNodeChild(if_name, then_name);
 
-    std::shared_ptr<StatementAST> else_node = if_node->getElse();
-    else_node->accept(this);
+    if_node->elseAccept(this);
     std::string else_name = popName();
     addNodeChild(if_name, else_name);
 }
@@ -209,23 +202,19 @@ void VizVisitor::forStAction(ForStatementAST * for_node) {
     pushName(for_name);
     addNodeLabel(for_name, "for(){...}");
 
-    std::shared_ptr<StatementAST> start_node = for_node->getStart();
-    start_node->accept(this);
+    for_node->startAccept(this);
     std::string start_name = popName();
     addNodeChild(for_name, start_name);
 
-    std::shared_ptr<ExprAST> cond_node = for_node->getEnd();
-    cond_node->accept(this);
+    for_node->endAccept(this);
     std::string cond_name = popName();
     addNodeChild(for_name, cond_name);
 
-    std::shared_ptr<StatementAST> step_node = for_node->getStep();
-    step_node->accept(this);
+    for_node->stepAccept(this);
     std::string step_name = popName();
     addNodeChild(for_name, step_name);
 
-    std::shared_ptr<StatementAST> body_node = for_node->getBody();
-    body_node->accept(this);
+    for_node->endAccept(this);
     std::string body_name = popName();
     addNodeChild(for_name, body_name);
 }
@@ -264,7 +253,7 @@ void VizVisitor::blockStAction(BlockStatementAST * block_node) {
     block_node->resetStatementIndex();
     //fprintf(stderr,"action %i\n",block_node->anotherStatement());
     while (block_node->anotherStatement()){
-        block_node->statementAcceptOnce(this);
+        block_node->statementAcceptOne(this);
         statement_name = popName();
         addNodeChild(block_name,statement_name);
     }
