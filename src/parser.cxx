@@ -626,7 +626,7 @@ std::unique_ptr<PrototypeAST> Parser::parsePrototype(){
 // std::unique_ptr<PrototypeAST> Parser::parseExtern();
 
 
-int Parser::parseLoop(std::vector<std::shared_ptr<NodeAST>> * parsedASTs){
+int Parser::parseLoop(std::vector<std::unique_ptr<NodeAST>> * parsedASTs){
     while(true){
         printParseAndToken("mainLoop");
         switch(current_token_){

@@ -33,8 +33,8 @@ TypeVisitor::TypeVisitor(){
 //------------------------------
 
 void TypeVisitor::typecheckAST(std::shared_ptr<NodeAST> node){
-    fprintf(stderr, "getting top level to accept\n");
     node->accept(this);
+    printVarScopes();
 }
 
 //-----------------------------------------
@@ -77,7 +77,6 @@ bool TypeVisitor::funcIsDefined(std::string func_name){
 //--------------------------
 
 std::vector<std::string> TypeVisitor::getCurrentScope(){
-    fprintf(stderr,"how many scopes? %lu", scope_definitions_stack_.size());
     return scope_definitions_stack_[scope_definitions_stack_.size()-1];
 }
 
@@ -97,12 +96,11 @@ void TypeVisitor::pushNewScope(std::vector<std::string> new_scope){
 
 void TypeVisitor::pushToCurrentScope(std::string new_definition){
     scope_definitions_stack_[scope_definitions_stack_.size()-1].push_back(new_definition);
+    printVarScopes();
 }
 
 bool TypeVisitor::isInCurrentScope(std::string candidate_id){
-    fprintf(stderr,"getting current scope in isInCurrentScope\n");
     auto current_scope = getCurrentScope();
-    fprintf(stderr,"got it\n");
     for(auto id_str : current_scope){
         if (id_str == candidate_id){
             return true; 
@@ -134,6 +132,7 @@ void TypeVisitor::printVarScopes(){
     for(auto var_stack:identifier_stacks_){
         fprintf(stderr,"%5s ",var_stack.first.c_str());
     }
+    fprintf(stderr,"\n");
 }
 
 //--------------------
@@ -287,7 +286,6 @@ void TypeVisitor::callStAction(CallStatementAST * call_node){}
 void TypeVisitor::assignStAction(AssignStatementAST * assign_node){
     // var = expr
     // 1. a in scope definitions
-    fprintf(stderr,"in assign action\n");
     std::string assigned_var = assign_node->getIdentifier();
     if(!varIsDefined(assigned_var)){
         typingMessage("Assigned variable not defined", assigned_var, assign_node->getLocStr());
@@ -316,25 +314,19 @@ void TypeVisitor::assignStAction(AssignStatementAST * assign_node){
 
 void TypeVisitor::initStAction(InitStatementAST * init_node){
     // a of type = expr;
-    fprintf(stderr,"init action\n");
     // 1. a not in current scope definitions
     std::string init_id_str = init_node->getIdentifier();
-    fprintf(stderr,"init identifier is: %s\n", init_id_str.c_str());
     if (isInCurrentScope(init_id_str)){
         typingMessage("Identifier previously defined in this scope", init_node->getIdentifier());
         return; //throw
     }
-    fprintf(stderr,"getting init type\n");
     BType type = init_node->getType();
     // Can safely define for this scope, so add
     addVarDefinition(init_id_str, type);
 
     // 2. expr of type type
     //std::shared_ptr<AssignStatementAST> assign_node = init_node->getAssignment();
-    fprintf(stderr,"calling assign accept within init\n");
     // assign node action either types well or throws
-    //init_node->getAssignment().accept(this);
-    init_node->getAssignment().getCol();
     init_node->assignmentAccept(this);
 }
 

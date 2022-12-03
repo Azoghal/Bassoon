@@ -107,7 +107,7 @@ int test_call_expr(){
 int countParserStatementTestFails(std::vector<int> source_tokens){
     int failures = 0;
     utils::setupParseSourceTokens(source_tokens);
-    std::vector<std::shared_ptr<NodeAST>> * ASTs;
+    std::vector<std::unique_ptr<NodeAST>> * ASTs;
     auto result = Parser::parseLoop(ASTs);
     failures += check(result);
     return failures;
