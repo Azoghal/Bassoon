@@ -25,7 +25,6 @@ class VizVisitor : public ASTVisitor{
     std::string popName(std::string s);
     std::string popName();
 public:
-    VizVisitor();
     VizVisitor(std::string phase);
     ~VizVisitor();
     void boolExprAction(BoolExprAST * bool_node) override;
