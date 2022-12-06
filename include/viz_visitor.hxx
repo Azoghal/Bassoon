@@ -12,6 +12,7 @@ namespace viz{
 class VizVisitor : public ASTVisitor{
     std::map<std::string, int> unique_namer_map_;
     std::vector<std::string> name_stack_;
+    std::string output_filename_ = "../out/AST_Trees.dot";
     std::ofstream output_;
     std::set<std::string> node_base_names_;
     int verbosity_ = 0;
@@ -25,6 +26,7 @@ class VizVisitor : public ASTVisitor{
     std::string popName();
 public:
     VizVisitor();
+    VizVisitor(std::string phase);
     ~VizVisitor();
     void boolExprAction(BoolExprAST * bool_node) override;
     void intExprAction(IntExprAST * int_node) override;

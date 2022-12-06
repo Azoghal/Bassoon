@@ -25,6 +25,15 @@ int check (int result){
     return 0;
 }
 
+int check (std::vector<std::unique_ptr<bassoon::StatementAST>> nodes){
+    if(!nodes.size()){
+        fprintf(stderr,"FAILED\n");
+        return 1;
+    }
+    fprintf(stderr,"pass\n");
+    return 0;
+}
+
 namespace bassoon{
 namespace test{
 
@@ -107,9 +116,15 @@ int test_call_expr(){
 int countParserStatementTestFails(std::vector<int> source_tokens){
     int failures = 0;
     utils::setupParseSourceTokens(source_tokens);
-    std::vector<std::unique_ptr<NodeAST>> * ASTs;
-    auto result = Parser::parseLoop(ASTs);
-    failures += check(result);
+    try
+    {
+        auto result = Parser::parseLoop();
+    }
+    catch(const std::exception& e)
+    {
+        // fprintf(stderr,"%s", e.what())
+        failures++; 
+    }
     return failures;
 }
 

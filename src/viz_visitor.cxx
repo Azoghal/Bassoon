@@ -7,8 +7,13 @@ namespace viz
 {
 
 VizVisitor::VizVisitor(){
-    output_ = std::ofstream("../out/AST_Trees.dot", std::ofstream::out);
+    output_ = std::ofstream(output_filename_, std::ofstream::out);
     node_base_names_ = std::set<std::string>({"Init","Bool","Int","Double","intType","boolType","doubleType","Var","Assign","Func","Proto","ProtoArg","ProtoRet","Block", "Binary"});
+}
+
+VizVisitor::VizVisitor(std::string phase){
+    output_filename_ = "../out/AST_Trees" + phase + ".dot";
+    VizVisitor();
 }
 
 VizVisitor::~VizVisitor(){

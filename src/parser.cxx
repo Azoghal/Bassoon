@@ -2,6 +2,7 @@
 #include "lexer.hxx"
 #include "log_error.hxx"
 #include "tokens.hxx"
+#include "exceptions.hxx"
 
 namespace bassoon
 {
@@ -626,7 +627,9 @@ std::unique_ptr<PrototypeAST> Parser::parsePrototype(){
 // std::unique_ptr<PrototypeAST> Parser::parseExtern();
 
 
-int Parser::parseLoop(std::vector<std::unique_ptr<NodeAST>> * parsedASTs){
+std::pair<std::vector<std::unique_ptr<StatementAST>>,std::vector<std::unique_ptr<FunctionAST>>> Parser::parseLoop(){
+    std::vector<std::unique_ptr<StatementAST>> top_level_statements;
+    std::vector<std::unique_ptr<FunctionAST>> function_definitions;
     while(true){
         printParseAndToken("mainLoop");
         switch(current_token_){
@@ -639,30 +642,31 @@ int Parser::parseLoop(std::vector<std::unique_ptr<NodeAST>> * parsedASTs){
                 auto def = parseDefinition();
                 if(!def){
                     fprintf(stderr,"Error parsing definition\n");
-                    return 1;
+                    throw BError();
                 }
-                parsedASTs->push_back(std::move(def));
+                function_definitions.push_back(std::move(def));
                 if(verbosity_)
                     fprintf(stderr, "Parsed Definitionn Successfully\n");
                 break;
             };
             case tok_eof: {
                 printParseAndToken("EOF");
-                return 0;
+                return std::make_pair(std::move(top_level_statements), std::move(function_definitions));
             };
             default: {
                 printParseAndToken("default");
                 auto statement = parseStatement();
                 if(!statement){
                     fprintf(stderr,"Error parsing statement\n");
-                    return 1;
+                    throw BError();
                 }
-                parsedASTs->push_back(std::move(statement));
+                top_level_statements.push_back(std::move(statement));
                 if(verbosity_)
                     fprintf(stderr, "Parsed Top Level Statement Successfully\n");
             };
         }
     }
+    return std::make_pair(std::move(top_level_statements), std::move(function_definitions));
 }
 
 } // namespace bassoon
