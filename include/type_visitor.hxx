@@ -17,7 +17,6 @@ class TypeVisitor : public ASTVisitor{
     // only return and block statements push to this stack. A block statement with
     // no return statement within will push the type_void
     std::vector<BType> return_type_stack_;
-    bool return_type_ready_;
     BType popReturnType();
     // scope_definitions_stack_: a stack of info about scopes - 
     // the identifiers that are defined in them, that need to be 

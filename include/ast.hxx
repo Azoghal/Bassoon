@@ -272,7 +272,7 @@ public:
         : StatementAST(loc), statements_(std::move(statements)) {};
     void accept(ASTVisitor * v) override {v->blockStAction(this);};
     void resetStatementIndex(){statement_index_=0;}
-    bool anotherStatement(){return statement_index_ < statements_.size();};
+    bool anotherStatement(){fprintf(stderr,"number statements: %lu\n",statements_.size()); return statement_index_ < statements_.size();};
     const StatementAST & getOneStatement() {return *statements_[statement_index_++];}
     void statementAcceptOne(ASTVisitor *  v){statements_[statement_index_++]->accept(v);}
     bool hasReturn() const {return has_return_;}

@@ -11,15 +11,15 @@ namespace typecheck
 {
 
 void typingMessage(std::string message){
-    fprintf(stderr, "%s", message.c_str());
+    fprintf(stderr, "%s\n", message.c_str());
 }
 
 void typingMessage(std::string message, std::string var_or_func_name){
-    fprintf(stderr, "%s: %s", message.c_str(),var_or_func_name.c_str());
+    fprintf(stderr, "%s: %s\n", message.c_str(),var_or_func_name.c_str());
 }
 
 void typingMessage(std::string message, std::string var_or_func_name, std::string loc_str){
-    fprintf(stderr, "%s: %s at %s", message.c_str(), var_or_func_name.c_str(), loc_str.c_str());
+    fprintf(stderr, "%s: %s at %s\n", message.c_str(), var_or_func_name.c_str(), loc_str.c_str());
 }
 
 //----------------------------
@@ -305,8 +305,8 @@ void TypeVisitor::returnStAction(ReturnStatementAST * return_node){
         typingMessage("Return expression failed to type","",expr_node.getLocStr());
         return; // throw
     }
+    typingMessage("Adding return type to stack from return at ", return_node->getLocStr());
     return_type_stack_.push_back(expr_node.getType());
-    return_type_ready_ = true;
 }
 
 void TypeVisitor::blockStAction(BlockStatementAST * block_node){
@@ -323,8 +323,10 @@ void TypeVisitor::blockStAction(BlockStatementAST * block_node){
     // (if there is agreement)
     int original_size = return_type_stack_.size();
     int isc; // inner statement count
+    block_node->resetStatementIndex();
     for(isc = 0; block_node->anotherStatement(); ++isc){
         // check that the statements type well
+        typingMessage("accepting in statement loop");
         block_node->statementAcceptOne(this);
     }
 
@@ -336,7 +338,7 @@ void TypeVisitor::blockStAction(BlockStatementAST * block_node){
 
     // pop all the contained returned types and add them to the set
     std::set<BType> contained_return_types;
-    for(;isc>0;--isc){
+    for(int st_i = number_pushed; st_i>0;--st_i){
         contained_return_types.insert(popReturnType());
     }
 
