@@ -2,7 +2,7 @@
 
 class BError : public std::exception {
 public:
-    char * what () {
+    const char * what() const throw() {
         return "Base bassoon exception";
     }
 };

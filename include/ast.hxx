@@ -247,12 +247,15 @@ public:
 
 class ReturnStatementAST : public StatementAST {
     std::unique_ptr<ExprAST> return_expr_;
+    BType return_type_;
 public:
     ReturnStatementAST(SourceLoc loc, std::unique_ptr<ExprAST> return_expr)
         : StatementAST(loc), return_expr_(std::move(return_expr)) {};
     void accept(ASTVisitor * v) override {v->returnStAction(this);};
     const ExprAST & getReturnExpr() const {return *return_expr_;}
     void returnExprAccept(ASTVisitor * v) {return_expr_->accept(v);}
+    BType getReturnType() const {return return_type_;}
+    void setReturnType(BType ret_type) {return_type_ = ret_type;}
 };
 
 // ------------------------
@@ -262,14 +265,18 @@ public:
 class BlockStatementAST : public StatementAST{
     std::vector<std::unique_ptr<StatementAST>> statements_;
     int statement_index_ = 0;
+    bool has_return_;
+    BType return_type_;
 public:
     BlockStatementAST(SourceLoc loc, std::vector<std::unique_ptr<StatementAST>> statements)
         : StatementAST(loc), statements_(std::move(statements)) {};
     void accept(ASTVisitor * v) override {v->blockStAction(this);};
     void resetStatementIndex(){statement_index_=0;}
     bool anotherStatement(){return statement_index_ < statements_.size();};
-    const StatementAST getOneStatement() {return *statements_[statement_index_++];}
+    const StatementAST & getOneStatement() {return *statements_[statement_index_++];}
     void statementAcceptOne(ASTVisitor *  v){statements_[statement_index_++]->accept(v);}
+    bool hasReturn() const {return has_return_;}
+    BType getReturnType() const {return return_type_;}
 };
 
 class CallStatementAST : public StatementAST {

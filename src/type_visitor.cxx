@@ -1,6 +1,9 @@
 #include "type_visitor.hxx"
 #include "types.hxx"
 #include "inbuilt_operators.hxx"
+#include "exceptions.hxx"
+
+#include <set>
 
 namespace bassoon
 {
@@ -133,6 +136,22 @@ void TypeVisitor::printVarScopes(){
         fprintf(stderr,"%5s ",var_stack.first.c_str());
     }
     fprintf(stderr,"\n");
+}
+
+//-------------------
+//  Return Type Helpers
+//-------------------
+
+BType TypeVisitor::popReturnType(){
+    if(return_type_stack_.size() == 0){
+        typingMessage("Ran out of return types");
+        throw BError();
+    }
+    else{
+        BType top_type = return_type_stack_[return_type_stack_.size()-1];
+        return_type_stack_.pop_back();
+        return top_type;
+    }
 }
 
 //--------------------
@@ -279,8 +298,72 @@ void TypeVisitor::binaryExprAction(BinaryExprAST * binary_node) {
 void TypeVisitor::ifStAction(IfStatementAST * if_node){}
 void TypeVisitor::forStAction(ForStatementAST * for_node){}
 void TypeVisitor::whileStAction(WhileStatementAST * while_node){}
-void TypeVisitor::returnStAction(ReturnStatementAST * return_node){}
-void TypeVisitor::blockStAction(BlockStatementAST * block_node){}
+void TypeVisitor::returnStAction(ReturnStatementAST * return_node){
+    return_node->returnExprAccept(this);
+    auto expr_node = return_node->getReturnExpr();
+    if (!hasType(expr_node)){
+        typingMessage("Return expression failed to type","",expr_node.getLocStr());
+        return; // throw
+    }
+    return_type_stack_.push_back(expr_node.getType());
+    return_type_ready_ = true;
+}
+
+void TypeVisitor::blockStAction(BlockStatementAST * block_node){
+    // A block statement can contain a return statement
+    // Other constructs have block statements and therefore can contain return statements
+    // Block statement typechecks if all its sub statements typecheck
+    // and it has agreeing return types.
+    // Visit each statement in order - how to capture if its a return or a block statement?
+    // Bool Handled Recent Return
+    // BType Most Recent Return  - stack? and assert always empty
+    
+    // Can ignore the lower portion of the stack as it is in a larger scope
+    // Must leave the stack one larger - with the agreed return type of this block
+    // (if there is agreement)
+    int original_size = return_type_stack_.size();
+    int isc; // inner statement count
+    for(isc = 0; block_node->anotherStatement(); ++isc){
+        block_node->statementAcceptOne(this);
+    }
+    typingMessage("statement block inner statements: ", std::to_string(isc), block_node->getLocStr());
+    int number_pushed = return_type_stack_.size() - original_size;
+    typingMessage("number of pushed ret types", std::to_string(number_pushed));
+
+    // pop all the contained returned types and add them to the set
+    std::set<BType> contained_return_types;
+    for(;isc>0;--isc){
+        contained_return_types.insert(popReturnType());
+    }
+
+    const bool has_void = contained_return_types.find(type_void) != contained_return_types.end();
+    int ret_type_count = contained_return_types.size();
+    if (ret_type_count > 2 || (!has_void && ret_type_count > 1)){
+        std::string disagreed = "";
+        for (BType bt : contained_return_types){
+            disagreed.append(typeToStr(bt));
+            disagreed.append(" ");
+        }
+        typingMessage("Disagreement in return type", disagreed);
+        throw BError();
+    }
+
+    BType return_type = type_void;
+    // find the other type if it exists
+    for(BType bt : contained_return_types){
+        if (bt!=type_void){
+            return_type = bt;
+            break;
+        }
+    }
+    //assert size of stack is same as when entered this block
+    if(return_type_stack_.size()!=original_size){
+        typingMessage("Return type stack not the same at exit as entry",block_node->getLocStr());
+    }
+    return_type_stack_.push_back(return_type);
+}
+
+
 void TypeVisitor::callStAction(CallStatementAST * call_node){}
 
 void TypeVisitor::assignStAction(AssignStatementAST * assign_node){
