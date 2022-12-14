@@ -324,8 +324,12 @@ void TypeVisitor::blockStAction(BlockStatementAST * block_node){
     int original_size = return_type_stack_.size();
     int isc; // inner statement count
     for(isc = 0; block_node->anotherStatement(); ++isc){
+        // check that the statements type well
         block_node->statementAcceptOne(this);
     }
+
+    // Now need to check that return types match
+
     typingMessage("statement block inner statements: ", std::to_string(isc), block_node->getLocStr());
     int number_pushed = return_type_stack_.size() - original_size;
     typingMessage("number of pushed ret types", std::to_string(number_pushed));
