@@ -18,6 +18,7 @@ class TypeVisitor : public ASTVisitor{
     // no return statement within will push the type_void
     std::vector<BType> return_type_stack_;
     BType popReturnType();
+    void checkRetStackSize(int original_size);
     // scope_definitions_stack_: a stack of info about scopes - 
     // the identifiers that are defined in them, that need to be 
     // popped off identifier_stacks_ when the scope closes.

@@ -58,7 +58,7 @@ public:
     virtual void accept(ASTVisitor * v) = 0;
     int getLine() const {return loc_.line;};
     int getCol() const {return loc_.collumn;};
-    std::string getLocStr(){
+    std::string getLocStr() const{
         std::string formatted_loc = "{" + std::to_string(loc_.line) + ":" + std::to_string(loc_.collumn) + "}";
         return formatted_loc;
     }
@@ -149,7 +149,7 @@ public:
     void resetArgIndex(){arg_index_ = 0;}
     bool anotherArg() const {return arg_index_ < args_.size();}
     const ExprAST & getOneArg(){return *args_[arg_index_++];}
-    void argAcceptOne(ASTVisitor * v){args_[arg_index_++];}
+    void argAcceptOne(ASTVisitor * v){args_[arg_index_++]->accept(v);}
 };
 
 //-----------------------
@@ -272,7 +272,7 @@ public:
         : StatementAST(loc), statements_(std::move(statements)) {};
     void accept(ASTVisitor * v) override {v->blockStAction(this);};
     void resetStatementIndex(){statement_index_=0;}
-    bool anotherStatement(){fprintf(stderr,"number statements: %lu\n",statements_.size()); return statement_index_ < statements_.size();};
+    bool anotherStatement(){return statement_index_ < statements_.size();};
     const StatementAST & getOneStatement() {return *statements_[statement_index_++];}
     void statementAcceptOne(ASTVisitor *  v){statements_[statement_index_++]->accept(v);}
     bool hasReturn() const {return has_return_;}

@@ -154,6 +154,12 @@ BType TypeVisitor::popReturnType(){
     }
 }
 
+void TypeVisitor::checkRetStackSize(int original_size){
+    if(original_size != return_type_stack_.size()){
+        typingMessage("Return type stack size differs from original expected.", std::to_string(original_size), std::to_string(return_type_stack_.size()));
+    }
+}
+
 //--------------------
 // Typing Helpers
 //--------------------
@@ -209,10 +215,33 @@ void TypeVisitor::callExprAction(CallExprAST * call_node) {
     std::string func_name = call_node->getName();
     if(!funcIsDefined(func_name)){
         std::string loc_str = call_node->getLocStr();
-        typingMessage("Variable not defined before use", func_name, loc_str);
-    } else{
-        call_node->setType(funcContext(func_name).getReturnType());
+        typingMessage("Function not defined before use", func_name, loc_str);
+        return; //throw BError();
     }
+    
+    BFType func_type = funcContext(func_name);
+
+    // Try to type all the args
+    call_node->resetArgIndex();
+    while(call_node->anotherArg()){
+        call_node->argAcceptOne(this); 
+    }
+
+    std::vector<BType> expected_arg_types = func_type.getArgumentTypes();
+    // Check their types match
+    call_node->resetArgIndex();
+    for(int arg_i=0; call_node->anotherArg(); ++arg_i){
+        auto arg_expr = call_node->getOneArg();
+        if(arg_expr.getType() != expected_arg_types[arg_i]){
+            std::string arg_type_str = 
+                "Exp: " + typeToStr(expected_arg_types[arg_i])
+                + "Actual: " + typeToStr(arg_expr.getType())
+                + arg_expr.getLocStr();
+            typingMessage("Arg doesn't match", func_name, arg_type_str);
+            return; // throw?
+        }
+    }
+    call_node->setType(func_type.getReturnType());
 }
 
 void TypeVisitor::unaryExprAction(UnaryExprAST * unary_node) {
@@ -295,9 +324,54 @@ void TypeVisitor::binaryExprAction(BinaryExprAST * binary_node) {
 // Statements will check that expressions have types
 // if a statement fails to type, it will raise an exception.
 
-void TypeVisitor::ifStAction(IfStatementAST * if_node){}
+void TypeVisitor::ifStAction(IfStatementAST * if_node){
+    // Condition must be bool
+    // Statements must type check and must agree if they have return types.
+    int original_ret_size = return_type_stack_.size();
+
+    if_node->condAccept(this);
+    auto cond_node = if_node->getCond();
+    if (!hasType(cond_node)){
+        typingMessage("If statement condition expression failed to type","",cond_node.getLocStr());
+        return; // throw
+    }
+    if(cond_node.getType() != type_bool){
+        typingMessage("If statement condition not a bool expression","",cond_node.getLocStr());
+        throw BError();
+    }
+
+    if_node->thenAccept(this);
+    auto then_node = if_node->getThen();
+    BType then_ret_type = popReturnType();
+
+    if_node->elseAccept(this);
+    auto else_node = if_node->getElse();
+    BType else_ret_type = popReturnType();
+
+    checkRetStackSize(original_ret_size);
+
+    if(then_ret_type != type_void && else_ret_type != type_void ){
+        if(then_ret_type == else_ret_type){
+            // both have a return and they match
+            return_type_stack_.push_back(else_ret_type);
+            return;
+        }else{
+            typingMessage("If statement then and else blocks have different return types.",then_node.getLocStr(),if_node->getLocStr());
+            throw BError();
+        }
+    }
+    else if(then_ret_type == type_void){
+        return_type_stack_.push_back(else_ret_type);
+    }
+    else if(else_ret_type == type_void){
+        return_type_stack_.push_back(then_ret_type);
+    }
+    typingMessage("ERROR - if return type checking code broken");
+}
+
 void TypeVisitor::forStAction(ForStatementAST * for_node){}
 void TypeVisitor::whileStAction(WhileStatementAST * while_node){}
+
 void TypeVisitor::returnStAction(ReturnStatementAST * return_node){
     return_node->returnExprAccept(this);
     auto expr_node = return_node->getReturnExpr();
@@ -321,7 +395,7 @@ void TypeVisitor::blockStAction(BlockStatementAST * block_node){
     // Can ignore the lower portion of the stack as it is in a larger scope
     // Must leave the stack one larger - with the agreed return type of this block
     // (if there is agreement)
-    int original_size = return_type_stack_.size();
+    int original_ret_size = return_type_stack_.size();
     int isc; // inner statement count
     block_node->resetStatementIndex();
     for(isc = 0; block_node->anotherStatement(); ++isc){
@@ -333,7 +407,7 @@ void TypeVisitor::blockStAction(BlockStatementAST * block_node){
     // Now need to check that return types match
 
     typingMessage("statement block inner statements: ", std::to_string(isc), block_node->getLocStr());
-    int number_pushed = return_type_stack_.size() - original_size;
+    int number_pushed = return_type_stack_.size() - original_ret_size;
     typingMessage("number of pushed ret types", std::to_string(number_pushed));
 
     // pop all the contained returned types and add them to the set
@@ -363,14 +437,28 @@ void TypeVisitor::blockStAction(BlockStatementAST * block_node){
         }
     }
     //assert size of stack is same as when entered this block
-    if(return_type_stack_.size()!=original_size){
-        typingMessage("Return type stack not the same at exit as entry",block_node->getLocStr());
-    }
+    checkRetStackSize(original_ret_size);
     return_type_stack_.push_back(return_type);
 }
 
 
-void TypeVisitor::callStAction(CallStatementAST * call_node){}
+void TypeVisitor::callStAction(CallStatementAST * call_node){
+    std::string function_name = call_node->getCall().getName();
+    if (!isInFuncContext(function_name)){
+        typingMessage("Function not defined at use",function_name,call_node->getLocStr());
+        throw BError();
+    }
+    BFType func_type = funcContext(function_name);
+
+    // Arg type checking done by the expression
+    call_node->callAccept(this);
+    if(!hasType(call_node->getCall())){
+        typingMessage("Call statement - call expression doesn't type");
+        throw BError();
+    }
+    // call statements have their return value thrown away
+    return_type_stack_.push_back(type_void);
+}
 
 void TypeVisitor::assignStAction(AssignStatementAST * assign_node){
     // var = expr
@@ -399,6 +487,7 @@ void TypeVisitor::assignStAction(AssignStatementAST * assign_node){
         typingMessage("Variable and expression type do not match", typeToStr(defined_type)+typeToStr(val_expr_type), assign_node->getLocStr());
         return; // throw
     }
+    return_type_stack_.push_back(type_void);
 }
 
 void TypeVisitor::initStAction(InitStatementAST * init_node){
@@ -417,6 +506,8 @@ void TypeVisitor::initStAction(InitStatementAST * init_node){
     //std::shared_ptr<AssignStatementAST> assign_node = init_node->getAssignment();
     // assign node action either types well or throws
     init_node->assignmentAccept(this);
+    popReturnType(); // pop the void from assignment
+    return_type_stack_.push_back(type_void); // add a void for the initialisation
 }
 
 void TypeVisitor::prototypeAction(PrototypeAST * proto_node){}
