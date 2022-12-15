@@ -122,6 +122,7 @@ void TypeVisitor::printVarScopes(){
             max_height = var_stack.second.size();
         }
     }
+    fprintf(stderr,"\n");
     // 5 characters for column, 1 character gap
     for(int i = max_height-1; i >= 0; --i){
         for(auto var_stack:identifier_stacks_){
@@ -135,7 +136,7 @@ void TypeVisitor::printVarScopes(){
     for(auto var_stack:identifier_stacks_){
         fprintf(stderr,"%5s ",var_stack.first.c_str());
     }
-    fprintf(stderr,"\n");
+    fprintf(stderr,"\nDefinition Stacks\n");
 }
 
 //-------------------
@@ -369,8 +370,56 @@ void TypeVisitor::ifStAction(IfStatementAST * if_node){
     typingMessage("ERROR - if return type checking code broken");
 }
 
-void TypeVisitor::forStAction(ForStatementAST * for_node){}
-void TypeVisitor::whileStAction(WhileStatementAST * while_node){}
+void TypeVisitor::forStAction(ForStatementAST * for_node){
+    int original_ret_size = return_type_stack_.size();
+
+    // start and step statements should type well
+    for_node->startAccept(this);
+    for_node->stepAccept(this);
+
+    // end condition a well typed bool expression
+    // check after start as will likely have defined induction variable.
+    for_node->endAccept(this);
+    auto end_node = for_node->getEnd();
+    if(!hasType(end_node)){
+        typingMessage("For statement condition not well typed");
+        throw BError();
+    }
+    if(end_node.getType() != type_bool){
+        typingMessage("For statement condition not a bool");
+        throw BError();
+    }
+
+    // Ret stack should have two more
+    checkRetStackSize(original_ret_size+2);
+    // Ignore the start and step statement return types
+    popReturnType();
+    popReturnType();
+
+    for_node->bodyAccept(this);
+    checkRetStackSize(original_ret_size+1);
+    // Leave the body's return type as the for statement's return type.
+}
+
+void TypeVisitor::whileStAction(WhileStatementAST * while_node){
+    // end condition a well typed bool expression
+    int original_ret_size = return_type_stack_.size();
+    while_node->condAccept(this);
+    auto end_node = while_node->getCond();
+    if(!hasType(end_node)){
+        typingMessage("While statement condition not well typed");
+        throw BError();
+    }
+    if(end_node.getType() != type_bool){
+        typingMessage("While statement condition not a bool");
+        throw BError();
+    }
+    
+    // Type Check the body
+    while_node->bodyAccept(this);
+    checkRetStackSize(original_ret_size+1);
+    // Leave the body's return type as the for statement's return type.
+}
 
 void TypeVisitor::returnStAction(ReturnStatementAST * return_node){
     return_node->returnExprAccept(this);
@@ -400,7 +449,6 @@ void TypeVisitor::blockStAction(BlockStatementAST * block_node){
     block_node->resetStatementIndex();
     for(isc = 0; block_node->anotherStatement(); ++isc){
         // check that the statements type well
-        typingMessage("accepting in statement loop");
         block_node->statementAcceptOne(this);
     }
 
