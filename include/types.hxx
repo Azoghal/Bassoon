@@ -23,7 +23,7 @@ public:
     BFType(std::vector<BType> argument_types, BType return_type) 
         : argument_types_(argument_types), return_type_(return_type), valid_(true) {}
     const std::vector<BType> & getArgumentTypes(){return argument_types_;}
-    const BType & getReturnType(){return return_type_;}
+    const BType & getReturnType() const {return return_type_;}
     int getArgCount(){return argument_types_.size();}
     bool isValid(){return valid_;}
 };

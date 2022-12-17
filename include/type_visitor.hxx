@@ -25,6 +25,7 @@ class TypeVisitor : public ASTVisitor{
     std::vector<std::vector<std::string>> scope_definitions_stack_;
     std::vector<std::string> getCurrentScope();
     std::vector<std::string> popCurrentScope();
+    void pushNewScope();
     void pushNewScope(std::vector<std::string> new_scope);
     void pushToCurrentScope(std::string new_definition);
     bool isInCurrentScope(std::string candidate_id);
@@ -35,7 +36,7 @@ class TypeVisitor : public ASTVisitor{
     void addFuncContext(std::string func_name, BFType type){func_types_[func_name] = type;}
     bool isInFuncContext(std::string candidate_f){for (auto f: func_types_){if(f.first==candidate_f){return true;}}return false;}
 
-    void addVarDefinition(std::string identifier, BType type){pushToCurrentScope(identifier); printVarScopes(); addTypeContext(identifier, type);}
+    void addVarDefinition(std::string identifier, BType type);
     bool varIsDefined(std::string identifier);
     bool funcIsDefined(std::string func_name);
 

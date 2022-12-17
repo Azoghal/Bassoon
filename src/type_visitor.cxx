@@ -70,6 +70,12 @@ bool TypeVisitor::varIsDefined(std::string identifier){
     return true;
 }
 
+void TypeVisitor::addVarDefinition(std::string identifier, BType type){
+    pushToCurrentScope(identifier);
+    printVarScopes();
+    addTypeContext(identifier, type);
+}
+
 bool TypeVisitor::funcIsDefined(std::string func_name){
     BFType func_type = func_types_[func_name];
     return func_type.isValid();
@@ -91,6 +97,10 @@ std::vector<std::string> TypeVisitor::popCurrentScope(){
         identifier_stacks_[old_scope_var].pop_back();
     }
     return old_scope_vars;
+}
+
+void TypeVisitor::pushNewScope(){
+    scope_definitions_stack_.push_back(std::vector<std::string>());
 }
 
 void TypeVisitor::pushNewScope(std::vector<std::string> new_scope){
@@ -558,8 +568,42 @@ void TypeVisitor::initStAction(InitStatementAST * init_node){
     return_type_stack_.push_back(type_void); // add a void for the initialisation
 }
 
-void TypeVisitor::prototypeAction(PrototypeAST * proto_node){}
-void TypeVisitor::functionAction(FunctionAST * func_node){}
+void TypeVisitor::prototypeAction(PrototypeAST * proto_node){
+    std::string f_name = proto_node->getName();
+    if(isInFuncContext(f_name)){
+        typingMessage("Function already defined",f_name, proto_node->getLocStr());
+        throw BError();
+    }
+    BFType f_type = proto_node->getType();
+    addFuncContext(f_name, f_type);
+
+    // populate var scopes with arguments
+    for (auto [var_id, var_type] : proto_node->getArgs()){
+        addVarDefinition(var_id,var_type);
+    }
+}
+
+void TypeVisitor::functionAction(FunctionAST * func_node){
+    int original_ret_size = return_type_stack_.size();
+    BType return_type = func_node->getType().getReturnType();
+    // Push new scope for argument definitions
+    pushNewScope();
+
+    // populate func and var context with proto accept
+    func_node->protoAccept(this);
+
+    // validate that body is well typed
+    func_node->bodyAccept(this);
+    popCurrentScope();
+
+    // validate that return type matches prototype
+    BType body_return_type = popReturnType();
+    checkRetStackSize(original_ret_size);
+    if(body_return_type != return_type){
+        typingMessage("Function body does not have same return type as prototype", func_node->getProto().getName(), func_node->getLocStr());
+        throw BError();
+    }
+}
 
 } // namespace typecheck
 } // namespace bassoon
