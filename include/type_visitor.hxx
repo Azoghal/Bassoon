@@ -41,6 +41,9 @@ class TypeVisitor : public ASTVisitor{
     bool funcIsDefined(std::string func_name);
 
     void printVarScopes();
+
+    void typecheckFuncDefs(std::shared_ptr<FuncDefs> func_defs);
+    void typecheckTopLevels(std::shared_ptr<TopLevels> top_levels);
 public:
     TypeVisitor();
     void boolExprAction(BoolExprAST * bool_node) override;
@@ -63,7 +66,12 @@ public:
     void prototypeAction(PrototypeAST * proto_node) override;
     void functionAction(FunctionAST * func_node) override;
 
-    void typecheckAST(std::shared_ptr<NodeAST> node);
+    void topLevelsAction(TopLevels * top_levels_node) override;
+    void funcDefsAction(FuncDefs * func_defs_node) override;
+    void programAction(BProgram * program_node) override;
+
+    //void typecheckAST(NodeAST * node);
+    void typecheck(std::shared_ptr<BProgram> program);
 };
 
 } // namespace typecheck

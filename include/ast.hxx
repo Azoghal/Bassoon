@@ -25,6 +25,9 @@ class AssignStatementAST;
 class InitStatementAST;
 class PrototypeAST;
 class FunctionAST;
+class TopLevels;
+class FuncDefs;
+class BProgram ;
 
 class ASTVisitor{
 
@@ -48,14 +51,23 @@ public:
 
     virtual void prototypeAction(PrototypeAST * proto_node) = 0;
     virtual void functionAction(FunctionAST * func_node) = 0;
+
+    virtual void topLevelsAction(TopLevels * top_levels_node) = 0;
+    virtual void funcDefsAction(FuncDefs * func_defs_node) = 0;
+    virtual void programAction(BProgram * program_node) = 0;
 };
 
 class NodeAST{
-    SourceLoc loc_;
 public:
-    NodeAST(SourceLoc loc) : loc_(loc) {};
     virtual ~NodeAST() = default;
     virtual void accept(ASTVisitor * v) = 0;
+};
+
+class SrcNodeAST:NodeAST{
+    SourceLoc loc_;
+public:
+    SrcNodeAST(SourceLoc loc) : loc_(loc) {};
+    virtual ~SrcNodeAST() = default;
     int getLine() const {return loc_.line;};
     int getCol() const {return loc_.collumn;};
     std::string getLocStr() const{
@@ -68,11 +80,11 @@ public:
 // Base Expression class
 //----------------------
 
-class ExprAST : public NodeAST{
+class ExprAST : public SrcNodeAST{
     BType type_;
 public:
-    ExprAST(SourceLoc loc, BType type) : NodeAST(loc), type_(type) {};
-    ExprAST(SourceLoc loc) : NodeAST(loc), type_(type_unknown) {};
+    ExprAST(SourceLoc loc, BType type) : SrcNodeAST(loc), type_(type) {};
+    ExprAST(SourceLoc loc) : SrcNodeAST(loc), type_(type_unknown) {};
     virtual ~ExprAST() = default;
     void accept(ASTVisitor * v) override {}
     const BType & getType() const {return type_;}
@@ -185,9 +197,9 @@ public:
 // Statements
 // -------------------------
 
-class StatementAST : public NodeAST{
+class StatementAST : public SrcNodeAST{
 public:
-    StatementAST(SourceLoc loc) : NodeAST(loc) {};
+    StatementAST(SourceLoc loc) : SrcNodeAST(loc) {};
     virtual ~StatementAST() = default;
     void accept(ASTVisitor * v) override {};
 };
@@ -319,13 +331,13 @@ public:
 // Function Expressions
 //-------------------------
 
-class PrototypeAST : public NodeAST{
+class PrototypeAST : public SrcNodeAST{
     std::string name_;
     std::vector<std::pair<std::string,BType>> args_;
     BFType func_type_;
 public:
     PrototypeAST(SourceLoc loc, std::string name, std::vector<std::pair<std::string,BType>> args, BFType func_type)
-        : NodeAST(loc), name_(name), args_(args), func_type_(func_type) {};
+        : SrcNodeAST(loc), name_(name), args_(args), func_type_(func_type) {};
     const std::string &getName() const {return name_;};
     void accept(ASTVisitor * v) override {v->prototypeAction(this);};
     const std::vector<std::pair<std::string,BType>> & getArgs(){return args_;};
@@ -333,18 +345,60 @@ public:
     const BFType & getType(){return func_type_;}
 };
 
-class FunctionAST : public NodeAST{
+class FunctionAST : public SrcNodeAST{
     std::unique_ptr<PrototypeAST> proto_;
     std::unique_ptr<StatementAST> body_;
 public:
     FunctionAST(SourceLoc loc, std::unique_ptr<PrototypeAST> proto, std::unique_ptr<StatementAST> body)
-        : NodeAST(loc), proto_(std::move(proto)), body_(std::move(body)) {};
+        : SrcNodeAST(loc), proto_(std::move(proto)), body_(std::move(body)) {};
     void accept(ASTVisitor * v) override {v->functionAction(this);};
     const PrototypeAST & getProto() const {return *proto_;};
     const StatementAST & getBody() const {return *body_;};
     const BFType & getType() const {return proto_->getType();}
     void protoAccept(ASTVisitor * v){proto_->accept(v);}
     void bodyAccept(ASTVisitor * v){body_->accept(v);}
+};
+
+// ---------------
+//   AST grouping
+// ---------------
+
+// class BGlobals : public SrcNodeAST{} // holds any 'global' statements in top level
+
+// Function definitions
+class FuncDefs : public NodeAST {
+    std::vector<std::unique_ptr<FunctionAST>> func_ASTs_;
+    //std::vector<std::unique_ptr<FunctionAST>>::iterator func_iter;
+public:
+    FuncDefs(std::vector<std::unique_ptr<FunctionAST>> func_ASTs)
+        : func_ASTs_(std::move(func_ASTs)) {}
+    void accept(ASTVisitor * v) override {v->funcDefsAction(this);};
+    void addFunction(std::unique_ptr<FunctionAST> func_AST){func_ASTs_.push_back(std::move(func_AST));}
+    //std::vector<std::unique_ptr<FunctionAST>>::iterator getFuncASTsIter(){return func_iter.begin();};
+};
+
+// Top Level statement ASTs
+class TopLevels : public NodeAST {
+    std::vector<std::unique_ptr<StatementAST>> statement_ASTs_;
+public:
+    TopLevels(std::vector<std::unique_ptr<StatementAST>> statement_ASTs)
+        : statement_ASTs_(std::move(statement_ASTs)) {}
+    void accept(ASTVisitor * v) override {v->topLevelsAction(this);};
+    void addStatement(std::unique_ptr<StatementAST> statement_AST){statement_ASTs_.push_back(std::move(statement_AST));}
+};
+
+// Overall Program
+class BProgram : public NodeAST {
+    std::unique_ptr<TopLevels> top_levels_; 
+    std::unique_ptr<FuncDefs> func_defs_;
+public:
+    BProgram(std::unique_ptr<TopLevels> top_levels, std::unique_ptr<FuncDefs> func_defs) 
+        : func_defs_(std::move(func_defs)), top_levels_(std::move(top_levels)) {};
+    void accept(ASTVisitor * v) override {v->programAction(this);};
+    // TopLevels & getTopLevels() {return * top_levels_;}
+    // FuncDefs & getFuncDefs() {return * func_defs_;}
+    // std::shared_ptr<TopLevels> getTopLevels(){return std::make_shared<TopLevels>(top_levels_);}
+    // std::shared_ptr<FuncDefs> getFuncDefs(){return std::make_shared<FuncDefs>(func_defs_);}
 };
 
 } // namespace bassoon

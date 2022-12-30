@@ -35,11 +35,27 @@ TypeVisitor::TypeVisitor(){
 // Public Driving Function
 //------------------------------
 
-void TypeVisitor::typecheckAST(std::shared_ptr<NodeAST> node){
-    node->accept(this);
-    printVarScopes();
+// void TypeVisitor::typecheckAST(NodeAST * node){
+//     node->accept(this);
+//     printVarScopes();
+// }
+
+void TypeVisitor::typecheck(std::shared_ptr<BProgram> program){
+    // std::shared_ptr<FuncDefs> func_defs = program->getFuncDefs();
+    // std::shared_ptr<TopLevels> top_levels = program->getTopLevels();
+    // // Typecheck functions and populate function context
+    // typecheckFuncDefs(func_defs);
+    // // Typecheck statements
+    // typecheckTopLevels(top_levels);
 }
 
+void TypeVisitor::typecheckFuncDefs(std::shared_ptr<FuncDefs> func_defs){
+
+}
+
+void TypeVisitor::typecheckTopLevels(std::shared_ptr<TopLevels> top_levels){
+    
+}
 //-----------------------------------------
 // Variable and Function Context helpers
 //-----------------------------------------
@@ -603,6 +619,23 @@ void TypeVisitor::functionAction(FunctionAST * func_node){
         typingMessage("Function body does not have same return type as prototype", func_node->getProto().getName(), func_node->getLocStr());
         throw BError();
     }
+}
+
+void TypeVisitor::topLevelsAction(TopLevels * top_levels_node){
+
+}
+
+void TypeVisitor::funcDefsAction(FuncDefs * func_defs_node){
+
+}
+
+void TypeVisitor::programAction(BProgram * program_node){
+    // 0.1  - add language globals/constants to variable context
+    // 0.2  - add language functions to function context
+    // 0.3  - currently no globals, but would need to add them to variable context here
+    // 1 - add all the function def prototypes to the function context
+    // 2 - typecheck all the function definitions
+    //
 }
 
 } // namespace typecheck

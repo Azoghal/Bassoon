@@ -627,7 +627,11 @@ std::unique_ptr<PrototypeAST> Parser::parsePrototype(){
 // std::unique_ptr<PrototypeAST> Parser::parseExtern();
 
 
-std::pair<std::vector<std::unique_ptr<StatementAST>>,std::vector<std::unique_ptr<FunctionAST>>> Parser::parseLoop(){
+std::unique_ptr<BProgram> Parser::parseLoop(){
+    // std::unique_ptr<TopLevels> top_level_statements;
+    // std::unique_ptr<FuncDefs> function_definitions;
+    // top_level_statements->thisWorks();
+    // function_definitions->thisWorks();
     std::vector<std::unique_ptr<StatementAST>> top_level_statements;
     std::vector<std::unique_ptr<FunctionAST>> function_definitions;
     while(true){
@@ -651,7 +655,9 @@ std::pair<std::vector<std::unique_ptr<StatementAST>>,std::vector<std::unique_ptr
             };
             case tok_eof: {
                 printParseAndToken("EOF");
-                return std::make_pair(std::move(top_level_statements), std::move(function_definitions));
+                std::unique_ptr<TopLevels> top_levels = std::make_unique<TopLevels>(std::move(top_level_statements));
+                std::unique_ptr<FuncDefs> func_defs = std::make_unique<FuncDefs>(std::move(function_definitions));
+                return std::make_unique<BProgram>(std::move(top_levels), std::move(func_defs));
             };
             default: {
                 printParseAndToken("default");
@@ -666,7 +672,10 @@ std::pair<std::vector<std::unique_ptr<StatementAST>>,std::vector<std::unique_ptr
             };
         }
     }
-    return std::make_pair(std::move(top_level_statements), std::move(function_definitions));
+    // *
+    // std::unique_ptr<TopLevels> top_levels = std::make_unique<TopLevels>(std::move(top_level_statements));
+    // std::unique_ptr<FuncDefs> func_defs = std::make_unique<FuncDefs>(std::move(function_definitions));
+    // return std::make_unique<BProgram>(std::move(top_levels), std::move(func_defs));
 }
 
 } // namespace bassoon
