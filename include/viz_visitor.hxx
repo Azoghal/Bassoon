@@ -47,8 +47,12 @@ public:
     void prototypeAction(PrototypeAST * proto_node) override;
     void functionAction(FunctionAST * func_node) override;
 
-    void visualiseAST(std::shared_ptr<NodeAST> AST);
-    void visualiseASTs(std::vector<std::shared_ptr<NodeAST>> ASTs);
+    void topLevelsAction(TopLevels * top_levels_node) override;
+    void funcDefsAction(FuncDefs * func_defs_node) override;
+    void programAction(BProgram * program_node) override;
+
+    void visualiseAST(std::shared_ptr<BProgram> AST);
+    // void visualiseASTs(std::vector<std::shared_ptr<NodeAST>> ASTs);
 };
 
 } // namespace viz

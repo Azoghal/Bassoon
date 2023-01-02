@@ -47,6 +47,7 @@ void TypeVisitor::typecheck(std::shared_ptr<BProgram> program){
     // typecheckFuncDefs(func_defs);
     // // Typecheck statements
     // typecheckTopLevels(top_levels);
+    program->accept(this);
 }
 
 void TypeVisitor::typecheckFuncDefs(std::shared_ptr<FuncDefs> func_defs){
@@ -636,6 +637,7 @@ void TypeVisitor::programAction(BProgram * program_node){
     // 1 - add all the function def prototypes to the function context
     // 2 - typecheck all the function definitions
     //
+    typingMessage("NOT IMPLEMENTED - type visitor program action");
 }
 
 } // namespace typecheck

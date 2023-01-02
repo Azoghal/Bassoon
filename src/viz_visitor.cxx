@@ -24,15 +24,15 @@ VizVisitor::~VizVisitor(){
 // Public driving functions
 //---------------------
 
-void VizVisitor::visualiseAST(std::shared_ptr<NodeAST> AST){
+void VizVisitor::visualiseAST(std::shared_ptr<BProgram> program){
     output_ << "digraph { \n";
-        AST->accept(this);
+        program->accept(this);
     output_ << "}";
 }
 
-void VizVisitor::visualiseASTs(std::vector<std::shared_ptr<NodeAST>> ASTs){
+// void VizVisitor::visualiseASTs(std::vector<std::shared_ptr<NodeAST>> ASTs){
     
-}
+// }
 
 //-----------------------
 // Node name management
@@ -100,6 +100,21 @@ std::string VizVisitor::popName(){
     return to_pop;
 }
 
+//----------------------
+//  Program Actions
+//----------------------
+
+void VizVisitor::programAction(BProgram * program_node){
+    fprintf(stderr,"NOT IMPLEMENTED - vis visitor programaction\n");
+}
+
+void VizVisitor::funcDefsAction(FuncDefs * func_defs_node){
+
+}
+
+void VizVisitor::topLevelsAction(TopLevels * top_levels){
+
+}
 //----------------------
 // Expression actions
 //----------------------
