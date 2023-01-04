@@ -22,6 +22,5 @@ int main(int argc, char *argv[]){
     visualiser->visualiseAST(program);
     delete visualiser;
 
-    fprintf(stderr, "Typecheck completed\n");
     return 0;
 }

@@ -398,6 +398,7 @@ public:
     bool anotherStatement(){return statement_index_<statement_ASTs_.size();}
     void statementsAllAccept(ASTVisitor * v) {
         while(anotherStatement()){
+            fprintf(stderr,"statement %d\n", statement_index_);
             statement_ASTs_[statement_index_]->accept(v);
             statement_index_++;
         }

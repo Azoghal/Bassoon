@@ -115,8 +115,8 @@ bool TypeVisitor::varIsDefined(std::string identifier){
 
 void TypeVisitor::addVarDefinition(std::string identifier, BType type){
     pushToCurrentScope(identifier);
-    printVarScopes();
     addTypeContext(identifier, type);
+    printVarScopes();
 }
 
 bool TypeVisitor::funcIsDefined(std::string func_name){
@@ -152,7 +152,6 @@ void TypeVisitor::pushNewScope(std::vector<std::string> new_scope){
 
 void TypeVisitor::pushToCurrentScope(std::string new_definition){
     scope_definitions_stack_[scope_definitions_stack_.size()-1].push_back(new_definition);
-    printVarScopes();
 }
 
 bool TypeVisitor::isInCurrentScope(std::string candidate_id){
@@ -645,6 +644,7 @@ void TypeVisitor::functionAction(FunctionAST * func_node){
         // populate func and var context with proto accept
         typingMessage("Accepting a function in proto phase");
         func_node->protoAccept(this);
+        break;
     }
     case(tp_func_check):{
         typingMessage("Accepting function in func typecheck phase");
@@ -652,6 +652,9 @@ void TypeVisitor::functionAction(FunctionAST * func_node){
         BType return_type = func_node->getType().getReturnType();
         // Push new scope for argument definitions
         pushNewScope();
+
+        // add the function arguments to the scope
+        func_node->protoAccept(this);
 
         // validate that body is well typed
         func_node->bodyAccept(this);
@@ -664,6 +667,7 @@ void TypeVisitor::functionAction(FunctionAST * func_node){
             typingMessage("Function body does not have same return type as prototype", func_node->getProto().getName(), func_node->getLocStr());
             throw BError();
         }
+        break;
     }
     default:{
         typingMessage("func typechecked in unexpected phase: ", tPhaseToStr(typecheck_phase_));
@@ -719,26 +723,33 @@ void TypeVisitor::programAction(BProgram * program_node){
     
     // Phase 1 - language variable context
     typecheck_phase_ = tp_lang_var;
+    typingMessage("Phase 1",tPhaseToStr(typecheck_phase_));
     // go over all the language variables
 
     // Phase 2 - language function context
     typecheck_phase_ = tp_lang_fun;
+    typingMessage("Phase 2",tPhaseToStr(typecheck_phase_));
     // go over all the language inbuilt functions
 
     // Phase 3 - function prototypes
     typecheck_phase_ = tp_func_proto;
+    typingMessage("Phase 3",tPhaseToStr(typecheck_phase_));
     program_node->funcDefsAccept(this);
 
     // Phase 4 - user globals (currently not in language)
     typecheck_phase_ = tp_user_glob;
+    typingMessage("Phase 4",tPhaseToStr(typecheck_phase_));
     program_node->topLevelsAccept(this);
+    
 
     // Phase 5 - function typecheck
     typecheck_phase_ = tp_func_check;
+    typingMessage("Phase 5",tPhaseToStr(typecheck_phase_));
     program_node->funcDefsAccept(this);
 
     // Phase 6 - top level statement typecheck
     typecheck_phase_ = tp_top_lvl_check;
+    typingMessage("Phase 6",tPhaseToStr(typecheck_phase_));
     program_node->topLevelsAccept(this);
 }
 
