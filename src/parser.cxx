@@ -202,15 +202,18 @@ std::unique_ptr<ExprAST> Parser::parseIdentifierExpr(){
     printParseAndToken("Identifier");
     SourceLoc identifier_loc = Lexer::getLoc();
     std::string identifier_name = Lexer::getIdentifier();
+    getNextToken(); // move onto '(' or next token if not a call
     if(current_token_ != '('){
-        getNextToken(); // consume the identifier.
+        //getNextToken(); // consume the identifier.
         return std::make_unique<VariableExprAST>(identifier_loc, identifier_name);
     }
        
     getNextToken(); // consume '('
+    printParseAndToken("IdIsFun");
     std::vector<std::unique_ptr<ExprAST>> args;
     bool expecting_another_arg = false;
     if (current_token_ != ')'){
+        printParseAndToken("AnArg");
         while(true){
             if (auto arg = parseExpression()){
                 args.push_back(std::move(arg));
@@ -364,10 +367,11 @@ std::unique_ptr<StatementAST> Parser::parseInitStatement(SourceLoc id_loc, std::
         return LogErrorS("Expected '=' after type in variable initialisation");
     getNextToken(); // consume '='
 
+    printParseAndToken("InitPreExpr");
     auto value_expr = parseExpression();
     if(!value_expr)
         return LogErrorS("Error with value_expr of assignment");
-    
+    printParseAndToken("InitEnd");
     if(current_token_ != ';')
         return LogErrorS("Expected semicolon to end variable initialisation");
     getNextToken(); // consume ';'
