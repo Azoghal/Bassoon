@@ -119,10 +119,11 @@ int countParserStatementTestFails(std::vector<int> source_tokens){
     try
     {
         auto result = Parser::parseLoop();
+        fprintf(stderr,"pass\n");
     }
     catch(const std::exception& e)
     {
-        // fprintf(stderr,"%s", e.what())
+        fprintf(stderr,"fail %s\n", e.what());
         failures++; 
     }
     return failures;
