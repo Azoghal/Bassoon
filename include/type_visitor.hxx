@@ -8,8 +8,18 @@
 
 namespace bassoon{
 namespace typecheck{
+enum typing_phase {
+    tp_lang_var = 0,
+    tp_lang_fun = 1,
+    tp_func_proto = 3,
+    tp_user_glob = 2,
+    tp_func_check = 4,
+    tp_top_lvl_check =5,
+};
 
 class TypeVisitor : public ASTVisitor{
+    // enum representing the phase of the typechecker
+    typing_phase typecheck_phase_;
     // a map of identifier name -> stack of types (allowing ghosting)
     std::map<std::string, std::vector<BType>> identifier_stacks_;
     std::map<std::string, BFType> func_types_;

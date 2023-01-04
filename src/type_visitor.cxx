@@ -22,6 +22,32 @@ void typingMessage(std::string message, std::string var_or_func_name, std::strin
     fprintf(stderr, "%s: %s at %s\n", message.c_str(), var_or_func_name.c_str(), loc_str.c_str());
 }
 
+std::string tPhaseToStr(typing_phase tp){
+    switch(tp){
+    case(tp_lang_var):{
+        return "tp_lang_var";
+    }
+    case(tp_lang_fun):{
+        return "tp_lang_fun";
+    }
+    case(tp_func_proto):{
+        return "tp_func_proto";
+    }
+    case(tp_user_glob):{
+        return "tp_user_glob";
+    }
+    case(tp_func_check):{
+        return "tp_func_check";
+    }
+    case(tp_top_lvl_check):{
+        return "tp_top_lvl_check";
+    }
+    default:{
+        return "not a typing phase";
+    }
+    }
+}
+
 //----------------------------
 // Constructor
 //----------------------------
@@ -623,20 +649,66 @@ void TypeVisitor::functionAction(FunctionAST * func_node){
 }
 
 void TypeVisitor::topLevelsAction(TopLevels * top_levels_node){
-
+    switch(typecheck_phase_){
+    case tp_user_glob:{
+        typingMessage("Add top level globals to context phase, not yet in language");
+        break;
+    }
+    case tp_top_lvl_check:{
+        // typecheck the top level statements
+        break;
+    }
+    default:{
+        typingMessage("Unexpected call to topLevelsAction in typecheck phase", tPhaseToStr(typecheck_phase_));
+    }
+    } 
 }
 
 void TypeVisitor::funcDefsAction(FuncDefs * func_defs_node){
-
+    switch(typecheck_phase_){
+    case tp_func_proto:{
+        // Find protos and add them to context
+        break;
+    }
+    case tp_func_check:{
+        // typecheck the bodies against the protos
+        break;
+    }
+    default:{
+        typingMessage("Unexpected call to funcDefsAction in typecheck phase", tPhaseToStr(typecheck_phase_));
+    }
+    }
 }
 
 void TypeVisitor::programAction(BProgram * program_node){
-    // 0.1  - add language globals/constants to variable context
-    // 0.2  - add language functions to function context
-    // 0.3  - currently no globals, but would need to add them to variable context here
-    // 1 - add all the function def prototypes to the function context
-    // 2 - typecheck all the function definitions
-    //
+    // 1  - add language globals/constants to variable context
+    // 2  - add language functions to function context
+    // 3  - add all the function def prototypes to the function context
+    // 4  - currently no globals, but would need to add them to variable context here
+    // 5 - typecheck all the function definitions
+    // 6 - typecheck all the top level statements (even if some functions didn't typecheck)
+    
+    // Phase 1 - language variable context
+    typecheck_phase_ = tp_lang_var;
+    // go over all the language variables
+
+    // Phase 2 - language function context
+    typecheck_phase_ = tp_lang_fun;
+    // go over all the language inbuilt functions
+
+    // Phase 3 - function prototypes
+    typecheck_phase_ = tp_func_proto;
+    
+
+    // Phase 4 - user globals (currently not in language)
+    typecheck_phase_ = tp_user_glob;
+
+    // Phase 5 - function typecheck
+    typecheck_phase_ = tp_func_check;
+
+    // Phase 6 - top level statement typecheck
+    typecheck_phase_ = tp_top_lvl_check;
+
     typingMessage("NOT IMPLEMENTED - type visitor program action");
 }
 
