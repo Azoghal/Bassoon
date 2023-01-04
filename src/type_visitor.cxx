@@ -612,39 +612,62 @@ void TypeVisitor::initStAction(InitStatementAST * init_node){
 }
 
 void TypeVisitor::prototypeAction(PrototypeAST * proto_node){
-    std::string f_name = proto_node->getName();
-    if(isInFuncContext(f_name)){
-        typingMessage("Function already defined",f_name, proto_node->getLocStr());
-        throw BError();
+    switch(typecheck_phase_){
+    case(tp_func_proto):{
+        typingMessage("adding prototype to context");
+        // adding the prototypes, so check not already defined.
+        std::string f_name = proto_node->getName();
+        if(isInFuncContext(f_name)){
+            typingMessage("Function already defined",f_name, proto_node->getLocStr());
+            throw BError();
+        }
+        BFType f_type = proto_node->getType();
+        addFuncContext(f_name, f_type);
+        break;
     }
-    BFType f_type = proto_node->getType();
-    addFuncContext(f_name, f_type);
-
-    // populate var scopes with arguments
-    for (auto [var_id, var_type] : proto_node->getArgs()){
-        addVarDefinition(var_id,var_type);
+    case(tp_func_check):{
+        typingMessage("adding proto var definitions for body typecheck");
+        // checking the function body so populate var scopes with arguments
+        for (auto [var_id, var_type] : proto_node->getArgs()){
+            addVarDefinition(var_id,var_type);
+        }
+        break;
+    }
+    default:{
+        typingMessage("func proto typechecked in unexpected phase: ", tPhaseToStr(typecheck_phase_));
+    }
     }
 }
 
 void TypeVisitor::functionAction(FunctionAST * func_node){
-    int original_ret_size = return_type_stack_.size();
-    BType return_type = func_node->getType().getReturnType();
-    // Push new scope for argument definitions
-    pushNewScope();
+    switch(typecheck_phase_){
+    case(tp_func_proto):{
+        // populate func and var context with proto accept
+        typingMessage("Accepting a function in proto phase");
+        func_node->protoAccept(this);
+    }
+    case(tp_func_check):{
+        typingMessage("Accepting function in func typecheck phase");
+        int original_ret_size = return_type_stack_.size();
+        BType return_type = func_node->getType().getReturnType();
+        // Push new scope for argument definitions
+        pushNewScope();
 
-    // populate func and var context with proto accept
-    func_node->protoAccept(this);
+        // validate that body is well typed
+        func_node->bodyAccept(this);
+        popCurrentScope();
 
-    // validate that body is well typed
-    func_node->bodyAccept(this);
-    popCurrentScope();
-
-    // validate that return type matches prototype
-    BType body_return_type = popReturnType();
-    checkRetStackSize(original_ret_size);
-    if(body_return_type != return_type){
-        typingMessage("Function body does not have same return type as prototype", func_node->getProto().getName(), func_node->getLocStr());
-        throw BError();
+        // validate that return type matches prototype
+        BType body_return_type = popReturnType();
+        checkRetStackSize(original_ret_size);
+        if(body_return_type != return_type){
+            typingMessage("Function body does not have same return type as prototype", func_node->getProto().getName(), func_node->getLocStr());
+            throw BError();
+        }
+    }
+    default:{
+        typingMessage("func typechecked in unexpected phase: ", tPhaseToStr(typecheck_phase_));
+    }
     }
 }
 
@@ -656,6 +679,8 @@ void TypeVisitor::topLevelsAction(TopLevels * top_levels_node){
     }
     case tp_top_lvl_check:{
         // typecheck the top level statements
+        typingMessage("accepting all top level statements in top level typecheck phase");
+        top_levels_node->statementsAllAccept(this);
         break;
     }
     default:{
@@ -668,10 +693,14 @@ void TypeVisitor::funcDefsAction(FuncDefs * func_defs_node){
     switch(typecheck_phase_){
     case tp_func_proto:{
         // Find protos and add them to context
+        typingMessage("accepting all functions in proto phase");
+        func_defs_node->functionsAllAccept(this);
         break;
     }
     case tp_func_check:{
         // typecheck the bodies against the protos
+        typingMessage("accepting all functions in function check phase");
+        func_defs_node->functionsAllAccept(this);
         break;
     }
     default:{
@@ -698,18 +727,19 @@ void TypeVisitor::programAction(BProgram * program_node){
 
     // Phase 3 - function prototypes
     typecheck_phase_ = tp_func_proto;
-    
+    program_node->funcDefsAccept(this);
 
     // Phase 4 - user globals (currently not in language)
     typecheck_phase_ = tp_user_glob;
+    program_node->topLevelsAccept(this);
 
     // Phase 5 - function typecheck
     typecheck_phase_ = tp_func_check;
+    program_node->funcDefsAccept(this);
 
     // Phase 6 - top level statement typecheck
     typecheck_phase_ = tp_top_lvl_check;
-
-    typingMessage("NOT IMPLEMENTED - type visitor program action");
+    program_node->topLevelsAccept(this);
 }
 
 } // namespace typecheck

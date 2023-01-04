@@ -369,22 +369,40 @@ public:
 class FuncDefs : public NodeAST {
     std::vector<std::unique_ptr<FunctionAST>> func_ASTs_;
     //std::vector<std::unique_ptr<FunctionAST>>::iterator func_iter;
+    int func_index_ = 0;
 public:
     FuncDefs(std::vector<std::unique_ptr<FunctionAST>> func_ASTs)
         : func_ASTs_(std::move(func_ASTs)) {}
     void accept(ASTVisitor * v) override {v->funcDefsAction(this);};
     void addFunction(std::unique_ptr<FunctionAST> func_AST){func_ASTs_.push_back(std::move(func_AST));}
+    bool anotherFunc(){return func_index_<func_ASTs_.size();}
+    void functionsAllAccept(ASTVisitor * v) {
+        while(anotherFunc()){
+            func_ASTs_[func_index_]->accept(v);
+            func_index_++;
+        }
+        func_index_=0;
+    }
     //std::vector<std::unique_ptr<FunctionAST>>::iterator getFuncASTsIter(){return func_iter.begin();};
 };
 
 // Top Level statement ASTs
 class TopLevels : public NodeAST {
     std::vector<std::unique_ptr<StatementAST>> statement_ASTs_;
+    int statement_index_ =0;
 public:
     TopLevels(std::vector<std::unique_ptr<StatementAST>> statement_ASTs)
         : statement_ASTs_(std::move(statement_ASTs)) {}
     void accept(ASTVisitor * v) override {v->topLevelsAction(this);};
     void addStatement(std::unique_ptr<StatementAST> statement_AST){statement_ASTs_.push_back(std::move(statement_AST));}
+    bool anotherStatement(){return statement_index_<statement_ASTs_.size();}
+    void statementsAllAccept(ASTVisitor * v) {
+        while(anotherStatement()){
+            statement_ASTs_[statement_index_]->accept(v);
+            statement_index_++;
+        }
+        statement_index_=0;
+    }
 };
 
 // Overall Program
@@ -399,6 +417,8 @@ public:
     // FuncDefs & getFuncDefs() {return * func_defs_;}
     // std::shared_ptr<TopLevels> getTopLevels(){return std::make_shared<TopLevels>(top_levels_);}
     // std::shared_ptr<FuncDefs> getFuncDefs(){return std::make_shared<FuncDefs>(func_defs_);}
+    void topLevelsAccept(ASTVisitor * v){top_levels_->accept(v);}
+    void funcDefsAccept(ASTVisitor * v){func_defs_->accept(v);}
 };
 
 } // namespace bassoon
