@@ -1,5 +1,6 @@
 #include "viz_visitor.hxx"
 #include "types.hxx"
+#include "exceptions.hxx"
 
 namespace bassoon
 {
@@ -9,7 +10,7 @@ namespace viz
 VizVisitor::VizVisitor(std::string phase){
     output_filename_ = "../out/AST_Trees" + phase + ".dot";
     output_ = std::ofstream(output_filename_, std::ofstream::out);
-    node_base_names_ = std::set<std::string>({"Init","Bool","Int","Double","intType","boolType","doubleType","Var","Assign","Func","Proto","ProtoArg","ProtoRet","Block", "Binary"});
+    node_base_names_ = std::set<std::string>({"Init","Bool","Int","Double","intType","boolType","doubleType","Var","Assign","CallSt","Return","Func","Proto","ProtoArg","ProtoRet","Block","CallExpr", "Binary", "FuncDefs","TopLevels"});
 }
 
 VizVisitor::~VizVisitor(){
@@ -105,15 +106,46 @@ std::string VizVisitor::popName(){
 //----------------------
 
 void VizVisitor::programAction(BProgram * program_node){
-    fprintf(stderr,"NOT IMPLEMENTED - vis visitor programaction\n");
+    std::string program_name = "Program";
+    addNodeLabel(program_name,program_name);
+    program_node->funcDefsAccept(this);
+    addNodeChild(program_name, popName());
+    program_node->topLevelsAccept(this);
+    addNodeChild(program_name,popName());
 }
 
 void VizVisitor::funcDefsAction(FuncDefs * func_defs_node){
-
+    std::string func_defs_name = getAndAdvanceName("FuncDefs");
+    pushName(func_defs_name);
+    addNodeLabel(func_defs_name,"Func Defs");
+    int pre_stack_size = name_stack_.size();
+    func_defs_node->functionsAllAccept(this);
+    int post_stack_size = name_stack_.size();
+    int stack_diff = post_stack_size-pre_stack_size;
+    if(stack_diff != func_defs_node->countFuncs()){
+        fprintf(stderr,"Stack size increase %d is different to number of function definitions %d\n ",stack_diff,func_defs_node->countFuncs());
+        throw BError();
+    }
+    for (int i =0; i<stack_diff;++i){
+        addNodeChild(func_defs_name,popName());
+    }
 }
 
 void VizVisitor::topLevelsAction(TopLevels * top_levels){
-
+    std::string top_levels_name = getAndAdvanceName("TopLevels");
+    pushName(top_levels_name);
+    addNodeLabel(top_levels_name, "Main");
+    int pre_stack_size = name_stack_.size();
+    top_levels->statementsAllAccept(this);
+    int post_stack_size = name_stack_.size();
+    int stack_diff = post_stack_size-pre_stack_size;
+    if(stack_diff != top_levels->countStatements()){
+        fprintf(stderr,"Stack size increase %d is different to number of top level statements %d",stack_diff,top_levels->countStatements());
+        throw BError();
+    }
+    for (int i =0; i<stack_diff;++i){
+        addNodeChild(top_levels_name,popName());
+    }
 }
 //----------------------
 // Expression actions
@@ -352,20 +384,24 @@ void VizVisitor::prototypeAction(PrototypeAST * proto_node) {
 
 void VizVisitor::functionAction(FunctionAST * func_node) {
     std::string function_name = getAndAdvanceName("Func");
+    pushName(function_name);
 
     PrototypeAST proto_node = func_node->getProto();
     std::string identifier_str = proto_node.getName();
     addNodeLabel(function_name, "define "+identifier_str);
 
-    proto_node.accept(this);
-    // func_node->acceptProto()
+    fprintf(stderr,"accepting proto\n");
+
+    func_node->protoAccept(this);
     std::string proto_name = popName();
     addNodeChild(function_name, proto_name);
 
-    StatementAST body_node = func_node->getBody();
-    body_node.accept(this);
+    fprintf(stderr,"accepting body\n");
+
+    func_node->bodyAccept(this);
     std::string body_name = popName();
     addNodeChild(function_name, body_name);
+
 }
 
 } // namespace viz

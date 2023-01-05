@@ -323,7 +323,7 @@ public:
     void accept(ASTVisitor * v) override {v->initStAction(this);};
     const std::string getIdentifier() const {return identifier_;}
     const BType getType() const {return var_type_;}
-    const AssignStatementAST &getAssignment() const {if(!assignment_){fprintf(stderr,"seems we've thrown the assignment away");};return *assignment_;}
+    const AssignStatementAST &getAssignment() const {return *assignment_;}
     void assignmentAccept(ASTVisitor * v) {assignment_->accept(v);}
 };
 
@@ -378,11 +378,13 @@ public:
     bool anotherFunc(){return func_index_<func_ASTs_.size();}
     void functionsAllAccept(ASTVisitor * v) {
         while(anotherFunc()){
+            fprintf(stderr,"function %s\n", func_ASTs_[func_index_]->getProto().getName().c_str());
             func_ASTs_[func_index_]->accept(v);
             func_index_++;
         }
         func_index_=0;
     }
+    int countFuncs(){return func_ASTs_.size();}
     //std::vector<std::unique_ptr<FunctionAST>>::iterator getFuncASTsIter(){return func_iter.begin();};
 };
 
@@ -404,6 +406,7 @@ public:
         }
         statement_index_=0;
     }
+    int countStatements(){return statement_ASTs_.size();}
 };
 
 // Overall Program

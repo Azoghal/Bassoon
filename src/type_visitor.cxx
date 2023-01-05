@@ -188,7 +188,6 @@ void TypeVisitor::printVarScopes(){
     for(auto var_stack:identifier_stacks_){
         fprintf(stderr,"%5s ",var_stack.first.c_str());
     }
-    fprintf(stderr,"\nDefinition Stacks\n");
 }
 
 //-------------------
