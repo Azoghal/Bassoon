@@ -164,10 +164,27 @@ bool TypeVisitor::isInCurrentScope(std::string candidate_id){
     return false;
 }
 
+void TypeVisitor::printCurrentScopeDefinitions(){
+    std::vector<std::string> current_scope = getCurrentScope();
+    int columns = current_scope.size();
+    int max_height = 1;
+    fprintf(stderr,"\n");
+    // 5 characters for column, 1 character gap
+    for(auto var:current_scope){
+        // stack big enough to print one.
+        fprintf(stderr,"%5s ",typeToStr(typeContext(var)).c_str());
+    }
+    fprintf(stderr,"\n");
+    for(auto var:current_scope){
+        fprintf(stderr,"%5s ",var.c_str());
+    }
+    fprintf(stderr,"\nCurrent Scope Definitions\n");
+}
+
 
 void TypeVisitor::printVarScopes(){
-    // print all the stacks of identifires
-    int collumns = identifier_stacks_.size();
+    // print all the stacks of identifiers
+    int columns = identifier_stacks_.size();
     int max_height = 0;
     for(auto var_stack: identifier_stacks_){
         if (var_stack.second.size() > max_height){
@@ -188,6 +205,8 @@ void TypeVisitor::printVarScopes(){
     for(auto var_stack:identifier_stacks_){
         fprintf(stderr,"%5s ",var_stack.first.c_str());
     }
+    fprintf(stderr,"\nOverall Stacks\n");
+    printCurrentScopeDefinitions();
 }
 
 //-------------------
@@ -414,9 +433,11 @@ void TypeVisitor::ifStAction(IfStatementAST * if_node){
     }
     else if(then_ret_type == type_void){
         return_type_stack_.push_back(else_ret_type);
+        return;
     }
     else if(else_ret_type == type_void){
         return_type_stack_.push_back(then_ret_type);
+        return;
     }
     typingMessage("ERROR - if return type checking code broken");
 }
@@ -495,6 +516,7 @@ void TypeVisitor::blockStAction(BlockStatementAST * block_node){
     // Can ignore the lower portion of the stack as it is in a larger scope
     // Must leave the stack one larger - with the agreed return type of this block
     // (if there is agreement)
+    pushNewScope();
     int original_ret_size = return_type_stack_.size();
     int isc; // inner statement count
     block_node->resetStatementIndex();
@@ -502,7 +524,7 @@ void TypeVisitor::blockStAction(BlockStatementAST * block_node){
         // check that the statements type well
         block_node->statementAcceptOne(this);
     }
-
+    printVarScopes();
     // Now need to check that return types match
 
     typingMessage("statement block inner statements: ", std::to_string(isc), block_node->getLocStr());
@@ -538,6 +560,7 @@ void TypeVisitor::blockStAction(BlockStatementAST * block_node){
     //assert size of stack is same as when entered this block
     checkRetStackSize(original_ret_size);
     return_type_stack_.push_back(return_type);
+    popCurrentScope();
 }
 
 

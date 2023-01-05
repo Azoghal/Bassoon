@@ -51,6 +51,7 @@ class TypeVisitor : public ASTVisitor{
     bool funcIsDefined(std::string func_name);
 
     void printVarScopes();
+    void printCurrentScopeDefinitions();
 
     void typecheckFuncDefs(std::shared_ptr<FuncDefs> func_defs);
     void typecheckTopLevels(std::shared_ptr<TopLevels> top_levels);
