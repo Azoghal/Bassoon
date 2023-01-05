@@ -720,6 +720,8 @@ void TypeVisitor::programAction(BProgram * program_node){
     // 5 - typecheck all the function definitions
     // 6 - typecheck all the top level statements (even if some functions didn't typecheck)
     
+    typingMessage("TYPECHECKING");
+
     // Phase 1 - language variable context
     typecheck_phase_ = tp_lang_var;
     typingMessage("Phase 1",tPhaseToStr(typecheck_phase_));
