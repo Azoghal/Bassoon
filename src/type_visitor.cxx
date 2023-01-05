@@ -198,6 +198,8 @@ void TypeVisitor::printVarScopes(){
             if(var_stack.second.size()>i){
                 // stack big enough to print one.
                 fprintf(stderr,"%5s ",typeToStr(var_stack.second[i]).c_str());
+            }else{
+                fprintf(stderr,"      "); // to make columns allign
             }
         }
         fprintf(stderr,"\n");
@@ -445,6 +447,9 @@ void TypeVisitor::ifStAction(IfStatementAST * if_node){
 void TypeVisitor::forStAction(ForStatementAST * for_node){
     int original_ret_size = return_type_stack_.size();
 
+    //push a new scope for the loop (will contain the induction variables)
+    pushNewScope();
+
     // start and step statements should type well
     for_node->startAccept(this);
     for_node->stepAccept(this);
@@ -471,6 +476,9 @@ void TypeVisitor::forStAction(ForStatementAST * for_node){
     for_node->bodyAccept(this);
     checkRetStackSize(original_ret_size+1);
     // Leave the body's return type as the for statement's return type.
+
+    // pop the induction variable scope
+    popCurrentScope();
 }
 
 void TypeVisitor::whileStAction(WhileStatementAST * while_node){
