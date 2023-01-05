@@ -136,8 +136,19 @@ std::vector<std::string> TypeVisitor::popCurrentScope(){
     auto old_scope_vars = getCurrentScope();
     scope_definitions_stack_.pop_back();
     // remove any definitions made in the scope popped.
+    std::vector<std::string> now_empties;
     for (auto old_scope_var : old_scope_vars){
         identifier_stacks_[old_scope_var].pop_back();
+        if (identifier_stacks_[old_scope_var].size()==0){
+            now_empties.push_back(old_scope_var);
+        }
+    }
+    // erase any variable that no longer has a definition
+    for(auto empty_var : now_empties){
+        auto it = identifier_stacks_.find(empty_var);
+        if (it != identifier_stacks_.end()){
+            identifier_stacks_.erase(it);
+        }
     }
     return old_scope_vars;
 }
