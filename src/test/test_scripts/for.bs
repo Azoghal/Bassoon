@@ -1,0 +1,6 @@
+var of int = 0;
+other of int = 3;
+for(var of int = 10; var < 20; var = var + 1;){
+    other = other + var;
+}
+

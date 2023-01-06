@@ -1,0 +1,6 @@
+count of int = 0;
+even of bool = true;
+while(count < 10){
+    even = !even;
+    count = count + 1;
+}

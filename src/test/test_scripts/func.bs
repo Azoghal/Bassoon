@@ -1,0 +1,20 @@
+define foo() as{
+    val of int = 4;
+}
+
+define bar(arg of int) as{
+    arg = arg+3;
+}
+
+define baz(arg of double) gives double as{
+    return arg+3.0;
+}
+
+define fib(n of int) gives int as{
+    if (n<2) {
+        return 1;
+    }
+    else{
+        return fib(n-1) + fib(n-2);
+    }
+}

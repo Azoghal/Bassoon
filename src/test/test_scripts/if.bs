@@ -1,0 +1,31 @@
+b of bool = true;
+
+if(b){
+    return 4;
+}
+else{
+    return 5;
+}
+
+if(b){
+    return 4;
+}
+else{
+    b = !b;
+}
+
+if(b){
+    b = b;
+}
+else{
+    return 5;
+}
+
+if (b){
+    b = false;
+}
+else{
+    b = true;
+}
+
+
