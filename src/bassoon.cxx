@@ -9,7 +9,7 @@
 int main(int argc, char *argv[]){
     bassoon::Parser::setVerbosity(1);
 
-    //std::vector<std::unique_ptr<bassoon::NodeAST>>  * ASTs = new std::vector<std::unique_ptr<bassoon::NodeAST>>();
+    std::vector<std::unique_ptr<bassoon::NodeAST>>  * ASTs = new std::vector<std::unique_ptr<bassoon::NodeAST>>();
     std::shared_ptr<bassoon::BProgram> program = bassoon::Parser::parseLoop();
 
     bassoon::viz::VizVisitor * visualiser = new bassoon::viz::VizVisitor("Parse");
@@ -24,7 +24,8 @@ int main(int argc, char *argv[]){
     delete visualiser;
 
     bassoon::codegen::CodeGenerator * code_generator = new bassoon::codegen::CodeGenerator();
-    code_generator->MakeTestIR();
+    //code_generator->MakeTestIR();
+    code_generator->MakeTestMainIR();
     code_generator->PrintIR();
     code_generator->SetTarget();
     code_generator->Compile();

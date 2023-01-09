@@ -50,8 +50,8 @@ void CodeGenerator::MakeTestIR(){
     // nullptr return type - void. not var args
     std::vector<llvm::Type*> arg_types;
     arg_types.push_back(llvm::Type::getInt32Ty(*context_));
-    llvm::FunctionType * func_type = llvm::FunctionType::get(llvm::Type::getInt32Ty(*context_), arg_types, false);
-    llvm::Function * test_func = llvm::Function::Create(func_type, llvm::Function::ExternalLinkage, "testFunc", module_.get());
+    llvm::FunctionType * func_type = llvm::FunctionType::get(llvm::Type::getInt32Ty(*context_), arg_types, false); 
+    llvm::Function * test_func = llvm::Function::Create(func_type, llvm::Function::ExternalLinkage, "testFun", module_.get());
 
     // Set the arg names
     std::vector<std::string> arg_names = {"x"};
@@ -60,14 +60,16 @@ void CodeGenerator::MakeTestIR(){
         arg.setName(arg_names[i++]);
     }
 
+
     // Make sure not already defined
-    if(module_->getFunction("testFunc")){
-        fprintf(stderr,"testFunc already defined");
+    if(module_->getFunction("testFun")){
+        fprintf(stderr,"testFun already defined\n");
     }
 
     // Body
     llvm::BasicBlock *BB = llvm::BasicBlock::Create(*context_, "entry", test_func);
     builder_->SetInsertPoint(BB);
+
     // If args exist, record them in named values here
     named_values_.clear();
     for(auto &arg : test_func->args()){
@@ -79,7 +81,31 @@ void CodeGenerator::MakeTestIR(){
     llvm::Value * L = named_values_["x"];
     llvm::Value * R = llvm::ConstantInt::get(llvm::Type::getInt32Ty(*context_), 5, true);
     llvm::Value * sum = builder_->CreateAdd(L,R,"addTemp");
-    builder_->CreateRet(sum);
+    builder_->CreateRet(sum); 
+}
+
+void CodeGenerator::MakeTestMainIR(){
+    // Test Func is f(x) = x+5;
+    // nullptr return type - void. not var args
+    fprintf(stderr,"First");
+    llvm::FunctionType * func_type = llvm::FunctionType::get(llvm::Type::getVoidTy(*context_), false); 
+    fprintf(stderr,"Second");
+    llvm::Function * test_func = llvm::Function::Create(func_type, llvm::Function::ExternalLinkage, "main", module_.get());
+    fprintf(stderr,"Third");
+
+    // Make sure not already defined
+    if(module_->getFunction("main")){
+        fprintf(stderr,"main already defined\n");
+    }
+
+    // Body
+    llvm::BasicBlock *BB = llvm::BasicBlock::Create(*context_, "entry", test_func);
+    builder_->SetInsertPoint(BB);
+
+
+    const int val = 0;
+    llvm::Value * result = llvm::ConstantInt::get(llvm::Type::getInt32Ty(*context_), val, true);
+    builder_->CreateRet(result); 
 }
 
 void CodeGenerator::PrintIR(){
