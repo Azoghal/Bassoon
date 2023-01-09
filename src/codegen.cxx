@@ -1,5 +1,6 @@
 #include "ast.hxx"
 #include "codegen.hxx"
+#include "exceptions.hxx"
 
 namespace bassoon
 {
@@ -10,6 +11,38 @@ CodeGenerator::CodeGenerator(){
     context_ = std::make_unique<llvm::LLVMContext>();
     module_ = std::make_unique<llvm::Module>("doubleReed", *context_);
     builder_ = std::make_unique<llvm::IRBuilder<>>(*context_);
+}
+
+void CodeGenerator::SetTarget(){
+    std::string target_triple = llvm::sys::getDefaultTargetTriple();
+    if(target_triple != "x86_64-unknown-linux-gnu"){
+        fprintf(stderr,"Initialising all targets\n");
+        llvm::InitializeAllTargetInfos();
+        llvm::InitializeAllTargets();
+        llvm::InitializeAllTargetMCs();
+        llvm::InitializeAllAsmParsers();
+        llvm::InitializeAllAsmPrinters();
+    }else{
+        llvm::InitializeNativeTarget();
+        llvm::InitializeNativeTargetAsmParser();
+        llvm::InitializeNativeTargetAsmPrinter();
+    }
+
+    std::string target_lookup_error;
+    auto target = llvm::TargetRegistry::lookupTarget(target_triple, target_lookup_error);
+    if(!target){
+        llvm::errs()<<target_lookup_error;
+        fprintf(stderr,"%s\n", target_lookup_error.c_str());
+        return;
+    }
+    
+    std::string cpu = "generic";
+    std::string features = "";
+    llvm::TargetOptions options;
+    auto relocation_model = llvm::Optional<llvm::Reloc::Model>();
+    target_machine_ = target->createTargetMachine(target_triple, cpu, features, options, relocation_model);
+    module_->setDataLayout(target_machine_->createDataLayout());
+    module_->setTargetTriple(target_triple);
 }
 
 void CodeGenerator::MakeTestIR(){
@@ -46,11 +79,30 @@ void CodeGenerator::MakeTestIR(){
     llvm::Value * L = named_values_["x"];
     llvm::Value * R = llvm::ConstantInt::get(llvm::Type::getInt32Ty(*context_), 5, true);
     llvm::Value * sum = builder_->CreateAdd(L,R,"addTemp");
-    
+    builder_->CreateRet(sum);
 }
 
 void CodeGenerator::PrintIR(){
     module_->print(llvm::errs(), nullptr);
+}
+
+void CodeGenerator::Compile(){
+    std::string object_filename = "output.o";
+    std::error_code EC;
+    llvm::raw_fd_ostream destination (object_filename, EC, llvm::sys::fs::OF_None);
+    if(EC){
+        llvm::errs() << "Can't open file " << EC.message();
+        return;
+    }
+    llvm::legacy::PassManager pass_manager;
+    auto file_type = llvm::CGFT_ObjectFile; // code gen file type
+
+    if(target_machine_->addPassesToEmitFile(pass_manager, destination, nullptr, file_type)){
+        llvm::errs() << "target machine can't emit a file of this type";
+        return;
+    }
+    pass_manager.run(*module_);
+    destination.flush();
 }
 
 } // namespace codegen
