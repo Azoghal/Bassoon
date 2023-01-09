@@ -3,6 +3,7 @@
 #include "tokens.hxx"
 #include "viz_visitor.hxx"
 #include "type_visitor.hxx"
+#include "codegen.hxx"
 #include <iostream>
 
 int main(int argc, char *argv[]){
@@ -22,5 +23,9 @@ int main(int argc, char *argv[]){
     visualiser->visualiseAST(program);
     delete visualiser;
 
+    bassoon::codegen::CodeGenerator * code_generator = new bassoon::codegen::CodeGenerator();
+    code_generator->MakeTestIR();
+    code_generator->PrintIR();
+    delete code_generator;
     return 0;
 }
