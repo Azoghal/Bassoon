@@ -2,6 +2,12 @@
 #include "codegen.hxx"
 #include "exceptions.hxx"
 
+#ifdef _WIN32
+#define DLLEXPORT __declspec(dllexport)
+#else
+#define DLLEXPORT
+#endif
+
 namespace bassoon
 {
 namespace codegen
@@ -102,10 +108,23 @@ void CodeGenerator::MakeTestMainIR(){
     llvm::BasicBlock *BB = llvm::BasicBlock::Create(*context_, "entry", test_func);
     builder_->SetInsertPoint(BB);
 
+    std::vector<llvm::Value *> args;
+    llvm::Value * arg_val = llvm::ConstantInt::get(llvm::Type::getInt32Ty(*context_), 'a', true);
+    // llvm::Value * arg_val_ptr = llvm::IntToPtrInst(arg_val,llvm::Type::getInt8PtrTy(*context_),)
+    args.push_back(arg_val);
+    builder_->CreateCall(module_->getFunction("putchar"),args);
+    
 
     const int val = 0;
     llvm::Value * result = llvm::ConstantInt::get(llvm::Type::getInt32Ty(*context_), val, true);
     builder_->CreateRet(result); 
+}
+
+void CodeGenerator::DefinePutS(){
+    std::vector<llvm::Type *> arg_types;
+    arg_types.push_back(llvm::Type::getInt32Ty(*context_));
+    llvm::FunctionType * func_type = llvm::FunctionType::get(llvm::Type::getInt32Ty(*context_), arg_types, false); 
+    llvm::Function * func = llvm::Function::Create(func_type, llvm::Function::ExternalLinkage, "putchar", module_.get());
 }
 
 void CodeGenerator::PrintIR(){

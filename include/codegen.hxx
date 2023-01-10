@@ -31,6 +31,7 @@ public:
     void SetTarget();
     void MakeTestIR();
     void MakeTestMainIR();
+    void DefinePutS();
     void PrintIR();
     void Compile();
 };

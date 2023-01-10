@@ -25,6 +25,7 @@ int main(int argc, char *argv[]){
 
     bassoon::codegen::CodeGenerator * code_generator = new bassoon::codegen::CodeGenerator();
     //code_generator->MakeTestIR();
+    code_generator->DefinePutS();
     code_generator->MakeTestMainIR();
     code_generator->PrintIR();
     code_generator->SetTarget();
