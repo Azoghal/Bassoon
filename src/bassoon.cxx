@@ -24,9 +24,7 @@ int main(int argc, char *argv[]){
     delete visualiser;
 
     bassoon::codegen::CodeGenerator * code_generator = new bassoon::codegen::CodeGenerator();
-    //code_generator->MakeTestIR();
-    code_generator->DefinePutS();
-    code_generator->MakeTestMainIR();
+    code_generator->DefinePutChar();
     code_generator->PrintIR();
     code_generator->SetTarget();
     code_generator->Compile();
