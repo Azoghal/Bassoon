@@ -86,6 +86,12 @@ llvm::Value * CodeGenerator::popLlvmValue(){
     return val;
 }
 
+llvm::Function * CodeGenerator::popLlvmFunction(){
+    llvm::Function * f = llvm_function_stack_[llvm_function_stack_.size()-1];
+    llvm_function_stack_.pop_back();
+    return f;
+}
+
 //------------------------
 // Builder Helpers
 //------------------------
@@ -360,21 +366,78 @@ void CodeGenerator::binaryExprAction(BinaryExprAST * binary_node){
 }
 
 
-void CodeGenerator::ifStAction(IfStatementAST * if_node){};
-void CodeGenerator::forStAction(ForStatementAST * for_node){};
-void CodeGenerator::whileStAction(WhileStatementAST * while_node){};
-void CodeGenerator::returnStAction(ReturnStatementAST * return_node){};
-void CodeGenerator::blockStAction(BlockStatementAST * block_node){};
-void CodeGenerator::callStAction(CallStatementAST * call_node){};
-void CodeGenerator::assignStAction(AssignStatementAST * assign_node){};
-void CodeGenerator::initStAction(InitStatementAST * init_node){};
+void CodeGenerator::ifStAction(IfStatementAST * if_node){}
+void CodeGenerator::forStAction(ForStatementAST * for_node){}
+void CodeGenerator::whileStAction(WhileStatementAST * while_node){}
+void CodeGenerator::returnStAction(ReturnStatementAST * return_node){}
+void CodeGenerator::blockStAction(BlockStatementAST * block_node){}
+void CodeGenerator::callStAction(CallStatementAST * call_node){}
+void CodeGenerator::assignStAction(AssignStatementAST * assign_node){}
+void CodeGenerator::initStAction(InitStatementAST * init_node){}
 
-void CodeGenerator::prototypeAction(PrototypeAST * proto_node){};
-void CodeGenerator::functionAction(FunctionAST * func_node){};
+void CodeGenerator::prototypeAction(PrototypeAST * proto_node){
+    std::vector<llvm::Type *> llvm_arg_types;
+    BFType b_func_type = proto_node->getType();
+    auto b_arg_types = b_func_type.getArgumentTypes();
+    for (auto b_arg_type:b_arg_types){
+        llvm_arg_types.push_back(convertBType(b_arg_type));
+    }
 
-void CodeGenerator::topLevelsAction(TopLevels * top_levels_node){};
-void CodeGenerator::funcDefsAction(FuncDefs * func_defs_node){};
-void CodeGenerator::programAction(BProgram * program_node){};
+    auto ret_type = convertBType(b_func_type.getReturnType());
+    llvm::FunctionType * func_type = llvm::FunctionType::get(ret_type, llvm_arg_types, false);
+
+    llvm::Function * func = llvm::Function::Create(func_type, llvm::Function::ExternalLinkage, proto_node->getName(), module_.get());
+
+    std::vector<std::pair<std::string,BType>> args = proto_node->getArgs();
+    unsigned i = 0;
+    for(auto &arg : func->args()){
+        arg.setName(args[i++].first);
+    }
+
+    llvm_function_stack_.push_back(func);
+}
+
+void CodeGenerator::functionAction(FunctionAST * func_node){
+    llvm::Function * function = module_->getFunction(func_node->getProto().getName());
+
+    if(!function){
+        func_node->protoAccept(this);
+        function = popLlvmFunction();
+    }
+
+    // TODO VERIFT THAT FUNCTION MATCHES func_node's signature.
+
+    if(!function->empty()){
+        fprintf(stderr,"Expected function to be empty at definition\n");
+        throw BError();
+    }
+
+    llvm::BasicBlock *BB = llvm::BasicBlock::Create(*context_, "entry", function);
+    builder_->SetInsertPoint(BB);
+
+    // If args exist, record them in named values here
+    named_values_.clear();
+    for(auto &arg : function->args()){
+        std::string arg_name = arg.getName().str();
+        llvm::AllocaInst *alloca = createEntryBlockAlloca(function, arg_name);
+        builder_->CreateStore(&arg, alloca);
+        named_values_[arg_name] = alloca;
+    }
+
+    func_node->bodyAccept(this);
+    llvm::Value * body_ret_val = popLlvmValue();
+
+    // If we catch an error in the above accept, then erase this function from parent
+    // function->eraseFromParent();
+
+    llvm::verifyFunction(*function);
+
+    llvm_function_stack_.push_back(function);
+}
+
+void CodeGenerator::topLevelsAction(TopLevels * top_levels_node){}
+void CodeGenerator::funcDefsAction(FuncDefs * func_defs_node){}
+void CodeGenerator::programAction(BProgram * program_node){}
 
 } // namespace codegen
 } // namespace bassoon

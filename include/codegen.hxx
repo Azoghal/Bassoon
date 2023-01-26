@@ -9,6 +9,7 @@
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/Verifier.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Target/TargetOptions.h"
