@@ -55,10 +55,99 @@ void CodeGenerator::SetTarget(){
 // Helpers
 // ----------------------
 
-llvm::AllocaInst * CodeGenerator::CreateEntryBlockAlloca(llvm::Function *function, std::string var_name){
+llvm::AllocaInst * CodeGenerator::createEntryBlockAlloca(llvm::Function *function, std::string var_name){
     // Make an IR builder pointing to first instruction of entry block.
     llvm::IRBuilder<> temp_builder (&function->getEntryBlock(), function->getEntryBlock().begin());
     return temp_builder.CreateAlloca(llvm::Type::getDoubleTy(*context_),0,var_name.c_str());
+}
+
+llvm::Type * CodeGenerator::convertBType(BType btype){
+    // Handle function types?
+    switch(btype){
+    case(type_bool):{
+        return llvm::Type::getInt1Ty(*context_);
+    }
+    case(type_int):{
+        return llvm::Type::getInt32Ty(*context_);
+    }
+    case(type_double):{
+        return llvm::Type::getDoubleTy(*context_);
+    }
+    default:{
+        fprintf(stderr,"not a convertible type %s", typeToStr(btype).c_str());
+        throw BError();
+    }
+    }
+}
+
+llvm::Value * CodeGenerator::popLlvmValue(){
+    llvm::Value * val = llvm_value_stack_[llvm_value_stack_.size()-1];
+    llvm_value_stack_.pop_back();
+    return val;
+}
+
+//------------------------
+// Builder Helpers
+//------------------------
+
+llvm::Value * CodeGenerator::createAdd(BType res_type, llvm::Value * lhs_val, llvm::Value * rhs_val){
+    switch(res_type){
+    case(type_int):{
+        return builder_->CreateAdd(lhs_val,rhs_val,"int_bin_add_temp");
+    }
+    case(type_double):{
+        return builder_->CreateFAdd(lhs_val,rhs_val,"double_bin_add_temp");
+    }
+    default:{
+        fprintf(stderr, "Type is not a valid result of sum operation\n");
+        throw BError();
+    }
+    }
+}
+
+llvm::Value * CodeGenerator::createSub(BType res_type, llvm::Value * lhs_val, llvm::Value * rhs_val){
+    switch(res_type){
+    case(type_int):{
+        return builder_->CreateSub(lhs_val,rhs_val,"int_bin_sub_temp");
+    }
+    case(type_double):{
+        return builder_->CreateFSub(lhs_val,rhs_val,"double_bin_sub_temp");
+    }
+    default:{
+        fprintf(stderr, "Type is not a valid result of sub operation\n");
+        throw BError();
+    }
+    }
+}
+
+llvm::Value * CodeGenerator::createMul(BType res_type, llvm::Value * lhs_val, llvm::Value * rhs_val){
+    switch(res_type){
+    case(type_int):{
+        return builder_->CreateMul(lhs_val,rhs_val,"int_bin_mul_temp");
+    }
+    case(type_double):{
+        return builder_->CreateFMul(lhs_val,rhs_val,"double_bin_mul_temp");
+    }
+    default:{
+        fprintf(stderr, "Type is not a valid result of mul operation\n");
+        throw BError();
+    }
+    }
+}
+
+llvm::Value * CodeGenerator::createDiv(BType res_type, llvm::Value * lhs_val, llvm::Value * rhs_val){
+    switch(res_type){
+    case(type_int):{
+        return builder_->CreateSDiv(lhs_val,rhs_val,"int_bin_div_temp");
+    }
+    case(type_double):{
+        return builder_->CreateFDiv(lhs_val,rhs_val,"double_bin_div_temp");
+    }
+    default:{
+        fprintf(stderr, "Type is not a valid result of div operation\n");
+        throw BError();
+    }
+    }
 }
 
 // void CodeGenerator::MakeTestIR(){
@@ -165,40 +254,127 @@ void CodeGenerator::Compile(){
 //--------------------
 
 void CodeGenerator::boolExprAction(BoolExprAST * bool_node){
-
+    llvm::Value * bool_const = llvm::ConstantInt::get(llvm::Type::getInt1Ty(*context_),bool_node->getValue(),false);
+    llvm_value_stack_.push_back(bool_const);
 }
 
 void CodeGenerator::intExprAction(IntExprAST * int_node){
-
+    llvm::Value * int_const = llvm::ConstantInt::get(llvm::Type::getInt32Ty(*context_),int_node->getValue(),true);
+    llvm_value_stack_.push_back(int_const);
 }
 
 void CodeGenerator::doubleExprAction(DoubleExprAST * double_node){
-
+    llvm::Value * double_const = llvm::ConstantFP::get(*context_,llvm::APFloat(double_node->getValue()));
+    llvm_value_stack_.push_back(double_const);
 }
 
 void CodeGenerator::variableExprAction(VariableExprAST * variable_node){
     std::string name = variable_node->getName();
     std::string loc_str = variable_node->getLocStr();
+    llvm::Type * llvm_type = convertBType(variable_node->getType());
     llvm::Value *var_val = named_values_[variable_node->getName()];
     if(!var_val){
         fprintf(stderr,"Variable name unknown %s at %s",name.c_str(), loc_str.c_str());
         throw BError();
     }
-    // llvm::Value load_val = builder_->CreateLoad();
-    // llvm_value_stack_.push_back(load_val);
+    llvm::Value * load_val = builder_->CreateLoad(llvm_type, var_val, name.c_str());
+    llvm_value_stack_.push_back(load_val);
 }
 
 void CodeGenerator::callExprAction(CallExprAST * call_node){
+    llvm::Function * callee_func = module_->getFunction(call_node->getName());
+    if(!callee_func){
+        fprintf(stderr,"Unknown function called\n");
+        throw BError();
+    }
 
+    // TODO Check number of args ...
+
+    std::vector<llvm::Value *> args_vec;
+    while(call_node->anotherArg()){
+        call_node->argAcceptOne(this);
+        args_vec.push_back(popLlvmValue());
+    }
+
+    llvm::Value * call_val = builder_->CreateCall(callee_func,args_vec,"calltmp");
 }
 
 void CodeGenerator::unaryExprAction(UnaryExprAST * unary_node){
+    char op_code = unary_node->getOpCode();
+    // BType type = unary_node->getType();
 
+    unary_node->operandAccept(this);
+    llvm::Value * operand_val = popLlvmValue();
+
+    llvm::Value * unary_val;
+    switch(op_code){
+    case('-'):{
+        unary_val = builder_->CreateNeg(operand_val,"unary_neg_temp");
+        break;
+    }
+    case('!'):{
+        unary_val = builder_->CreateNot(operand_val,"unary_not_temp");
+        break;
+    }
+    default:{
+        fprintf(stderr,"Unknown unary operator %c\n",op_code);
+        throw BError(); 
+    }
+    }
+    llvm_value_stack_.push_back(unary_val);
 }
 
 void CodeGenerator::binaryExprAction(BinaryExprAST * binary_node){
+    char op_code = binary_node->getOpCode();
+    BType res_type = binary_node->getType();
 
+    binary_node->lhsAccept(this);
+    binary_node->rhsAccept(this);
+    llvm::Value * rhs_val = popLlvmValue();
+    llvm::Value * lhs_val = popLlvmValue();
+
+    llvm::Value * binary_val;
+    switch(op_code){
+    case('+'):{
+        createAdd(res_type, lhs_val, rhs_val);
+        break;
+    }
+    case('-'):{
+        createSub(res_type, lhs_val, rhs_val);
+        break;
+    }
+    case('*'):{
+        createMul(res_type, lhs_val, rhs_val);
+        break;
+    }
+    case('/'):{
+        createDiv(res_type, lhs_val, rhs_val);
+        break;
+    }
+    default:{
+        fprintf(stderr,"Unknown binary operator %c\n",op_code);
+        throw BError(); 
+    }
+    }
+    llvm_value_stack_.push_back(binary_val);
 }
+
+
+void CodeGenerator::ifStAction(IfStatementAST * if_node){};
+void CodeGenerator::forStAction(ForStatementAST * for_node){};
+void CodeGenerator::whileStAction(WhileStatementAST * while_node){};
+void CodeGenerator::returnStAction(ReturnStatementAST * return_node){};
+void CodeGenerator::blockStAction(BlockStatementAST * block_node){};
+void CodeGenerator::callStAction(CallStatementAST * call_node){};
+void CodeGenerator::assignStAction(AssignStatementAST * assign_node){};
+void CodeGenerator::initStAction(InitStatementAST * init_node){};
+
+void CodeGenerator::prototypeAction(PrototypeAST * proto_node){};
+void CodeGenerator::functionAction(FunctionAST * func_node){};
+
+void CodeGenerator::topLevelsAction(TopLevels * top_levels_node){};
+void CodeGenerator::funcDefsAction(FuncDefs * func_defs_node){};
+void CodeGenerator::programAction(BProgram * program_node){};
 
 } // namespace codegen
 } // namespace bassoon

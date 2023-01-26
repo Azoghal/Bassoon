@@ -123,7 +123,7 @@ public:
     IntExprAST(SourceLoc loc, int value) 
         : ValueExprAST(loc, type_int), value_(value) {};
     void accept(ASTVisitor * v) override {v->intExprAction(this);}
-    bool getValue() const {return value_;}
+    int getValue() const {return value_;}
 };
 
 class DoubleExprAST : public ValueExprAST{
@@ -132,7 +132,7 @@ public:
     DoubleExprAST(SourceLoc loc, double value) 
         : ValueExprAST(loc, type_double), value_(value) {};
     void accept(ASTVisitor * v) override {v->doubleExprAction(this);}
-    bool getValue() const {return value_;}
+    double getValue() const {return value_;}
 };
 
 //-----------------------

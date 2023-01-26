@@ -7,6 +7,8 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/LegacyPassManager.h"
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Target/TargetOptions.h"
@@ -15,6 +17,7 @@
 #include "llvm/Support/Host.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/FileSystem.h"
+
 
 namespace bassoon{
 namespace codegen{
@@ -27,10 +30,19 @@ class CodeGenerator : public ASTVisitor {
 
     llvm::TargetMachine * target_machine_;
 
-    std::vector<llvm::Value> llvm_value_stack_;
-    std::vector<llvm::Function> llvm_function_stack_;
+    std::vector<llvm::Value *> llvm_value_stack_;
+    std::vector<llvm::Function *> llvm_function_stack_;
 
-    llvm::AllocaInst * CreateEntryBlockAlloca(llvm::Function *function, std::string var_name);
+    llvm::Value * popLlvmValue();
+    llvm::Function * popLlvmFunction();
+    llvm::Type * convertBType(BType btype);
+
+    llvm::AllocaInst * createEntryBlockAlloca(llvm::Function *function, std::string var_name);
+
+    llvm::Value * createAdd(BType res_type, llvm::Value * lhs_val, llvm::Value * rhs_val);
+    llvm::Value * createSub(BType res_type, llvm::Value * lhs_val, llvm::Value * rhs_val);
+    llvm::Value * createMul(BType res_type, llvm::Value * lhs_val, llvm::Value * rhs_val);
+    llvm::Value * createDiv(BType res_type, llvm::Value * lhs_val, llvm::Value * rhs_val);
 public:
     CodeGenerator();
     void SetTarget();
