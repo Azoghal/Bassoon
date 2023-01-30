@@ -88,4 +88,4 @@ public:
 } // namespace typecheck
 } // namespace bassoon
 
-#endif // Bassoon_include_type_visitor_HXX
+#endif // Bassoon_include_type_visitor_HXXA

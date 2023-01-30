@@ -51,7 +51,7 @@ public:
     void MakeTestMainIR();
     void DefinePutChar();
     void PrintIR();
-    void Compile();
+    void Compile(std::shared_ptr<BProgram> program);
 
     void boolExprAction(BoolExprAST * bool_node) override;
     void intExprAction(IntExprAST * int_node) override;

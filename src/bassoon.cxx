@@ -27,7 +27,7 @@ int main(int argc, char *argv[]){
     code_generator->DefinePutChar();
     code_generator->PrintIR();
     code_generator->SetTarget();
-    code_generator->Compile();
+    code_generator->Compile(program);
     delete code_generator;
     return 0;
 }

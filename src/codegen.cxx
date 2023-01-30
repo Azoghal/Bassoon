@@ -236,7 +236,7 @@ void CodeGenerator::PrintIR(){
     module_->print(llvm::errs(), nullptr);
 }
 
-void CodeGenerator::Compile(){
+void CodeGenerator::Compile(std::shared_ptr<BProgram> program){
     std::string object_filename = "output.o";
     std::error_code EC;
     llvm::raw_fd_ostream destination (object_filename, EC, llvm::sys::fs::OF_None);
@@ -251,6 +251,10 @@ void CodeGenerator::Compile(){
         llvm::errs() << "target machine can't emit a file of this type";
         return;
     }
+
+    //Do the codegen
+    program->accept(this);
+
     pass_manager.run(*module_);
     destination.flush();
 }
@@ -405,7 +409,7 @@ void CodeGenerator::functionAction(FunctionAST * func_node){
         function = popLlvmFunction();
     }
 
-    // TODO VERIFT THAT FUNCTION MATCHES func_node's signature.
+    // TODO VERIFY THAT FUNCTION MATCHES func_node's signature.
 
     if(!function->empty()){
         fprintf(stderr,"Expected function to be empty at definition\n");
@@ -435,9 +439,16 @@ void CodeGenerator::functionAction(FunctionAST * func_node){
     llvm_function_stack_.push_back(function);
 }
 
-void CodeGenerator::topLevelsAction(TopLevels * top_levels_node){}
-void CodeGenerator::funcDefsAction(FuncDefs * func_defs_node){}
-void CodeGenerator::programAction(BProgram * program_node){}
+void CodeGenerator::topLevelsAction(TopLevels * top_levels_node){
+    //top_levels_node->statementsAllAccept(this);
+}
+void CodeGenerator::funcDefsAction(FuncDefs * func_defs_node){
+    func_defs_node->functionsAllAccept(this);
+}
+void CodeGenerator::programAction(BProgram * program_node){
+    program_node->funcDefsAccept(this);
+    program_node->topLevelsAccept(this);
+}
 
 } // namespace codegen
 } // namespace bassoon
