@@ -300,6 +300,7 @@ void CodeGenerator::callExprAction(CallExprAST * call_node){
 
     // TODO Check number of args ...
 
+    // codegen the args and pop them off into args vec
     std::vector<llvm::Value *> args_vec;
     while(call_node->anotherArg()){
         call_node->argAcceptOne(this);
@@ -373,8 +374,36 @@ void CodeGenerator::binaryExprAction(BinaryExprAST * binary_node){
 void CodeGenerator::ifStAction(IfStatementAST * if_node){}
 void CodeGenerator::forStAction(ForStatementAST * for_node){}
 void CodeGenerator::whileStAction(WhileStatementAST * while_node){}
-void CodeGenerator::returnStAction(ReturnStatementAST * return_node){}
-void CodeGenerator::blockStAction(BlockStatementAST * block_node){}
+
+void CodeGenerator::returnStAction(ReturnStatementAST * return_node){
+    // codegen return value
+    return_node->returnExprAccept(this);
+    llvm::Value * return_val = popLlvmValue();
+    llvm_value_stack_.push_back(builder_->CreateRet(return_val));
+}
+
+void CodeGenerator::blockStAction(BlockStatementAST * block_node){
+    llvm::BasicBlock *block_statement_entry = llvm::BasicBlock::Create(*context_, "block_statement_entry");
+    builder_->SetInsertPoint(block_statement_entry);
+
+    int llvm_val_stack_size = llvm_value_stack_.size();
+
+    // codegen for each statement, starting from this entry block
+    // need to call all the statements... and make sure they're popped off.
+    block_node->resetStatementIndex();
+    while(block_node->anotherStatement()){
+        block_node->statementAcceptOne(this);
+        popLlvmValue(); // discard the pushed value.
+    }
+
+    if(llvm_val_stack_size != llvm_value_stack_.size()){
+        fprintf(stderr,"Value stack size not maintained in block");
+        throw BError();
+    }
+
+    llvm_value_stack_.push_back(block_statement_entry);
+}
+
 void CodeGenerator::callStAction(CallStatementAST * call_node){}
 void CodeGenerator::assignStAction(AssignStatementAST * assign_node){}
 void CodeGenerator::initStAction(InitStatementAST * init_node){}
@@ -403,6 +432,7 @@ void CodeGenerator::prototypeAction(PrototypeAST * proto_node){
 
 void CodeGenerator::functionAction(FunctionAST * func_node){
     llvm::Function * function = module_->getFunction(func_node->getProto().getName());
+    current_function_ = function;
 
     if(!function){
         func_node->protoAccept(this);
@@ -440,7 +470,20 @@ void CodeGenerator::functionAction(FunctionAST * func_node){
 }
 
 void CodeGenerator::topLevelsAction(TopLevels * top_levels_node){
-    //top_levels_node->statementsAllAccept(this);
+    // setup an anonymous void function with no arguments containing the top level statements.
+    llvm::FunctionType * func_type = llvm::FunctionType::get(llvm::Type::getVoidTy(*context_), false); 
+    llvm::Function * main_function = llvm::Function::Create(func_type, llvm::Function::ExternalLinkage, "__main__", module_.get());
+    current_function_ = main_function;
+
+    llvm::BasicBlock *main_entry_block = llvm::BasicBlock::Create(*context_, "main_entry",main_function);
+    builder_->SetInsertPoint(main_entry_block);
+
+    // Add to a basic block inside the function
+    top_levels_node->statementsAllAccept(this);
+
+    llvm::verifyFunction(*main_function);
+
+    llvm_function_stack_.push_back(main_function);
 }
 void CodeGenerator::funcDefsAction(FuncDefs * func_defs_node){
     func_defs_node->functionsAllAccept(this);

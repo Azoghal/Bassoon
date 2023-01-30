@@ -34,6 +34,8 @@ class CodeGenerator : public ASTVisitor {
     std::vector<llvm::Value *> llvm_value_stack_;
     std::vector<llvm::Function *> llvm_function_stack_;
 
+    llvm::Function * current_function_;
+
     llvm::Value * popLlvmValue();
     llvm::Function * popLlvmFunction();
     llvm::Type * convertBType(BType btype);

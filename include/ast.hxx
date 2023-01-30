@@ -287,6 +287,12 @@ public:
     bool anotherStatement(){return statement_index_ < statements_.size();};
     const StatementAST & getOneStatement() {return *statements_[statement_index_++];}
     void statementAcceptOne(ASTVisitor *  v){statements_[statement_index_++]->accept(v);}
+    // void statementAcceptAll(ASTVisitor * v){
+    //     resetStatementIndex();
+    //     while(anotherStatement()){
+    //         statementAcceptOne(v);
+    //     }
+    // }
     bool hasReturn() const {return has_return_;}
     BType getReturnType() const {return return_type_;}
 };
