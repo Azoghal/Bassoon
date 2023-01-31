@@ -397,7 +397,7 @@ void CodeGenerator::blockStAction(BlockStatementAST * block_node){
     }
 
     if(llvm_val_stack_size != llvm_value_stack_.size()){
-        fprintf(stderr,"Value stack size not maintained in block");
+        fprintf(stderr,"Value stack size not maintained in block\n");
         throw BError();
     }
 
@@ -431,6 +431,7 @@ void CodeGenerator::prototypeAction(PrototypeAST * proto_node){
 }
 
 void CodeGenerator::functionAction(FunctionAST * func_node){
+    fprintf(stderr,"function action\n");
     llvm::Function * function = module_->getFunction(func_node->getProto().getName());
     current_function_ = function;
 
@@ -470,6 +471,7 @@ void CodeGenerator::functionAction(FunctionAST * func_node){
 }
 
 void CodeGenerator::topLevelsAction(TopLevels * top_levels_node){
+    fprintf(stderr,"Actually doing func defs\n");
     // setup an anonymous void function with no arguments containing the top level statements.
     llvm::FunctionType * func_type = llvm::FunctionType::get(llvm::Type::getVoidTy(*context_), false); 
     llvm::Function * main_function = llvm::Function::Create(func_type, llvm::Function::ExternalLinkage, "__main__", module_.get());
@@ -486,11 +488,12 @@ void CodeGenerator::topLevelsAction(TopLevels * top_levels_node){
     llvm_function_stack_.push_back(main_function);
 }
 void CodeGenerator::funcDefsAction(FuncDefs * func_defs_node){
+    fprintf(stderr,"Actually doing func defs, should be %i\n", func_defs_node->countFuncs());
     func_defs_node->functionsAllAccept(this);
 }
 void CodeGenerator::programAction(BProgram * program_node){
     program_node->funcDefsAccept(this);
-    program_node->topLevelsAccept(this);
+    //program_node->topLevelsAccept(this);
 }
 
 } // namespace codegen

@@ -632,10 +632,6 @@ std::unique_ptr<PrototypeAST> Parser::parsePrototype(){
 
 
 std::unique_ptr<BProgram> Parser::parseLoop(){
-    // std::unique_ptr<TopLevels> top_level_statements;
-    // std::unique_ptr<FuncDefs> function_definitions;
-    // top_level_statements->thisWorks();
-    // function_definitions->thisWorks();
     std::vector<std::unique_ptr<StatementAST>> top_level_statements;
     std::vector<std::unique_ptr<FunctionAST>> function_definitions;
     while(true){

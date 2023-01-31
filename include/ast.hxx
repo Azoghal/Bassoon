@@ -390,7 +390,7 @@ public:
         }
         func_index_=0;
     }
-    int countFuncs(){return func_ASTs_.size();}
+    int countFuncs() const {return func_ASTs_.size();}
     //std::vector<std::unique_ptr<FunctionAST>>::iterator getFuncASTsIter(){return func_iter.begin();};
 };
 
@@ -412,7 +412,7 @@ public:
         }
         statement_index_=0;
     }
-    int countStatements(){return statement_ASTs_.size();}
+    int countStatements() const {return statement_ASTs_.size();}
 };
 
 // Overall Program
@@ -423,10 +423,8 @@ public:
     BProgram(std::unique_ptr<TopLevels> top_levels, std::unique_ptr<FuncDefs> func_defs) 
         : func_defs_(std::move(func_defs)), top_levels_(std::move(top_levels)) {};
     void accept(ASTVisitor * v) override {v->programAction(this);};
-    // TopLevels & getTopLevels() {return * top_levels_;}
-    // FuncDefs & getFuncDefs() {return * func_defs_;}
-    // std::shared_ptr<TopLevels> getTopLevels(){return std::make_shared<TopLevels>(top_levels_);}
-    // std::shared_ptr<FuncDefs> getFuncDefs(){return std::make_shared<FuncDefs>(func_defs_);}
+    const TopLevels & getTopLevels() const {return *top_levels_;};
+    const FuncDefs & getFuncDefs() const {return *func_defs_;};
     void topLevelsAccept(ASTVisitor * v){top_levels_->accept(v);}
     void funcDefsAccept(ASTVisitor * v){func_defs_->accept(v);}
 };
