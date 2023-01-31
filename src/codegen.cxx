@@ -236,7 +236,7 @@ void CodeGenerator::PrintIR(){
     module_->print(llvm::errs(), nullptr);
 }
 
-void CodeGenerator::Compile(std::shared_ptr<BProgram> program){
+void CodeGenerator::Compile(){
     std::string object_filename = "output.o";
     std::error_code EC;
     llvm::raw_fd_ostream destination (object_filename, EC, llvm::sys::fs::OF_None);
@@ -252,8 +252,7 @@ void CodeGenerator::Compile(std::shared_ptr<BProgram> program){
         return;
     }
 
-    //Do the codegen
-    program->accept(this);
+    fprintf(stderr,"running the module\n");
 
     pass_manager.run(*module_);
     destination.flush();
@@ -269,7 +268,18 @@ void CodeGenerator::boolExprAction(BoolExprAST * bool_node){
 }
 
 void CodeGenerator::intExprAction(IntExprAST * int_node){
+    fprintf(stderr,"making int value %i \n", int_node->getValue());
     llvm::Value * int_const = llvm::ConstantInt::get(llvm::Type::getInt32Ty(*context_),int_node->getValue(),true);
+    if (llvm::ConstantInt* CI = llvm::dyn_cast<llvm::ConstantInt>(int_const)) {
+        // foo indeed is a ConstantInt, we can use CI here
+        if (CI->getBitWidth() <= 32) {
+            int int_val = CI->getSExtValue();
+            fprintf(stderr,"%i\n",int_val);
+        }
+    }
+    else {
+        // foo was not actually a ConstantInt
+    }
     llvm_value_stack_.push_back(int_const);
 }
 
@@ -377,9 +387,14 @@ void CodeGenerator::whileStAction(WhileStatementAST * while_node){}
 
 void CodeGenerator::returnStAction(ReturnStatementAST * return_node){
     // codegen return value
+    fprintf(stderr,"codegening return\n");
     return_node->returnExprAccept(this);
     llvm::Value * return_val = popLlvmValue();
-    llvm_value_stack_.push_back(builder_->CreateRet(return_val));
+    fprintf(stderr,"Making return");
+    llvm::Value * ret = builder_->CreateRet(return_val);
+    llvm_value_stack_.push_back(ret);
+
+    module_->print(llvm::errs(), nullptr);
 }
 
 void CodeGenerator::blockStAction(BlockStatementAST * block_node){
@@ -393,6 +408,7 @@ void CodeGenerator::blockStAction(BlockStatementAST * block_node){
     block_node->resetStatementIndex();
     while(block_node->anotherStatement()){
         block_node->statementAcceptOne(this);
+        fprintf(stderr,"popping and discarding a statement in blockstaction\n");
         popLlvmValue(); // discard the pushed value.
     }
 
@@ -404,7 +420,12 @@ void CodeGenerator::blockStAction(BlockStatementAST * block_node){
     llvm_value_stack_.push_back(block_statement_entry);
 }
 
-void CodeGenerator::callStAction(CallStatementAST * call_node){}
+void CodeGenerator::callStAction(CallStatementAST * call_node){
+    call_node->callAccept(this);
+    // llvm::Value * call_val = popLlvmValue();
+    // llvm_value_stack_.push_back(call_val);
+}
+
 void CodeGenerator::assignStAction(AssignStatementAST * assign_node){}
 void CodeGenerator::initStAction(InitStatementAST * init_node){}
 
@@ -433,9 +454,9 @@ void CodeGenerator::prototypeAction(PrototypeAST * proto_node){
 void CodeGenerator::functionAction(FunctionAST * func_node){
     fprintf(stderr,"function action\n");
     llvm::Function * function = module_->getFunction(func_node->getProto().getName());
-    current_function_ = function;
 
     if(!function){
+        fprintf(stderr,"Function not previously declared, accepting proto\n");
         func_node->protoAccept(this);
         function = popLlvmFunction();
     }
@@ -447,6 +468,7 @@ void CodeGenerator::functionAction(FunctionAST * func_node){
         throw BError();
     }
 
+    fprintf(stderr,"making basic block\n");
     llvm::BasicBlock *BB = llvm::BasicBlock::Create(*context_, "entry", function);
     builder_->SetInsertPoint(BB);
 
@@ -459,41 +481,45 @@ void CodeGenerator::functionAction(FunctionAST * func_node){
         named_values_[arg_name] = alloca;
     }
 
+    fprintf(stderr,"codegening body\n");
     func_node->bodyAccept(this);
     llvm::Value * body_ret_val = popLlvmValue();
 
     // If we catch an error in the above accept, then erase this function from parent
     // function->eraseFromParent();
 
-    llvm::verifyFunction(*function);
+    fprintf(stderr,"verifying the function\n");
+    if(!llvm::verifyFunction(*function)){
+        fprintf(stderr,"function body not verified.\n");
+    }
 
+    fprintf(stderr,"pushing the function\n");
     llvm_function_stack_.push_back(function);
 }
 
 void CodeGenerator::topLevelsAction(TopLevels * top_levels_node){
-    fprintf(stderr,"Actually doing func defs\n");
+    fprintf(stderr,"Actually doing Top Levels defs\n");
     // setup an anonymous void function with no arguments containing the top level statements.
-    llvm::FunctionType * func_type = llvm::FunctionType::get(llvm::Type::getVoidTy(*context_), false); 
-    llvm::Function * main_function = llvm::Function::Create(func_type, llvm::Function::ExternalLinkage, "__main__", module_.get());
-    current_function_ = main_function;
+    // llvm::FunctionType * func_type = llvm::FunctionType::get(llvm::Type::getVoidTy(*context_), false); 
+    // llvm::Function * main_function = llvm::Function::Create(func_type, llvm::Function::ExternalLinkage, "__main__", module_.get());
 
-    llvm::BasicBlock *main_entry_block = llvm::BasicBlock::Create(*context_, "main_entry",main_function);
+    llvm::BasicBlock *main_entry_block = llvm::BasicBlock::Create(*context_, "main_entry");
     builder_->SetInsertPoint(main_entry_block);
 
     // Add to a basic block inside the function
     top_levels_node->statementsAllAccept(this);
-
-    llvm::verifyFunction(*main_function);
-
-    llvm_function_stack_.push_back(main_function);
 }
+
 void CodeGenerator::funcDefsAction(FuncDefs * func_defs_node){
     fprintf(stderr,"Actually doing func defs, should be %i\n", func_defs_node->countFuncs());
     func_defs_node->functionsAllAccept(this);
 }
 void CodeGenerator::programAction(BProgram * program_node){
     program_node->funcDefsAccept(this);
-    //program_node->topLevelsAccept(this);
+    fprintf(stderr,"finished with funcdefs\n");
+    program_node->topLevelsAccept(this);
+    fprintf(stderr,"finished with toplevels\n");
+
 }
 
 } // namespace codegen
