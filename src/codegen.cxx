@@ -442,7 +442,6 @@ void CodeGenerator::prototypeAction(PrototypeAST * proto_node){
 }
 
 void CodeGenerator::functionAction(FunctionAST * func_node){
-    fprintf(stderr,"function action\n");
     llvm::Function * function = module_->getFunction(func_node->getProto().getName());
 
     if(!function){
@@ -458,7 +457,6 @@ void CodeGenerator::functionAction(FunctionAST * func_node){
         throw BError();
     }
 
-    fprintf(stderr,"making basic block\n");
     llvm::BasicBlock *entry_block = llvm::BasicBlock::Create(*context_, "entry", function);
     builder_->SetInsertPoint(entry_block);
 
@@ -475,32 +473,29 @@ void CodeGenerator::functionAction(FunctionAST * func_node){
     builder_->CreateBr(body_block);
     builder_->SetInsertPoint(body_block);
 
-    fprintf(stderr,"codegening body\n");
     func_node->bodyAccept(this);
-    // llvm::BasicBlock * body_block = llvm::dyn_cast<llvm::BasicBlock>(popLlvmValue());
-    // builder_->CreateBr(body_block);
 
     // If we catch an error in the above accept, then erase this function from parent
     // function->eraseFromParent();
 
-    llvm::raw_ostream * output = &llvm::errs();
+    llvm::raw_ostream * output = &llvm::outs();
 
-    fprintf(stderr,"verifying the function\n");
-    if(!llvm::verifyFunction(*function, output)){
+    fprintf(stderr,"Verifying function %s\n", func_node->getProto().getName().c_str());
+    if(llvm::verifyFunction(*function, output)){
+        // true indicates errors encountered.
         fprintf(stderr,"function body not verified.\n");
+        throw BError();
     }
 
-    fprintf(stderr,"pushing the function\n");
     llvm_function_stack_.push_back(function);
 }
 
 void CodeGenerator::topLevelsAction(TopLevels * top_levels_node){
-    fprintf(stderr,"Actually doing Top Levels defs\n");
-    // setup an anonymous void function with no arguments containing the top level statements.
-    // llvm::FunctionType * func_type = llvm::FunctionType::get(llvm::Type::getVoidTy(*context_), false); 
-    // llvm::Function * main_function = llvm::Function::Create(func_type, llvm::Function::ExternalLinkage, "__main__", module_.get());
+    // setup the main function
+    llvm::FunctionType * func_type = llvm::FunctionType::get(llvm::Type::getVoidTy(*context_), false); 
+    llvm::Function * main_function = llvm::Function::Create(func_type, llvm::Function::ExternalLinkage, "main", module_.get());
 
-    llvm::BasicBlock *main_entry_block = llvm::BasicBlock::Create(*context_, "main_entry");
+    llvm::BasicBlock *main_entry_block = llvm::BasicBlock::Create(*context_, "main_entry", main_function);
     builder_->SetInsertPoint(main_entry_block);
 
     // Add to a basic block inside the function
