@@ -270,20 +270,11 @@ void CodeGenerator::boolExprAction(BoolExprAST * bool_node){
 void CodeGenerator::intExprAction(IntExprAST * int_node){
     fprintf(stderr,"making int value %i \n", int_node->getValue());
     llvm::Value * int_const = llvm::ConstantInt::get(llvm::Type::getInt32Ty(*context_),int_node->getValue(),true);
-    if (llvm::ConstantInt* CI = llvm::dyn_cast<llvm::ConstantInt>(int_const)) {
-        // foo indeed is a ConstantInt, we can use CI here
-        if (CI->getBitWidth() <= 32) {
-            int int_val = CI->getSExtValue();
-            fprintf(stderr,"%i\n",int_val);
-        }
-    }
-    else {
-        // foo was not actually a ConstantInt
-    }
     llvm_value_stack_.push_back(int_const);
 }
 
 void CodeGenerator::doubleExprAction(DoubleExprAST * double_node){
+    fprintf(stderr,"making double value %f \n", double_node->getValue());
     llvm::Value * double_const = llvm::ConstantFP::get(*context_,llvm::APFloat(double_node->getValue()));
     llvm_value_stack_.push_back(double_const);
 }
@@ -387,19 +378,20 @@ void CodeGenerator::whileStAction(WhileStatementAST * while_node){}
 
 void CodeGenerator::returnStAction(ReturnStatementAST * return_node){
     // codegen return value
-    fprintf(stderr,"codegening return\n");
+    fprintf(stderr,"codegening return %lu \n", llvm_value_stack_.size());
     return_node->returnExprAccept(this);
     llvm::Value * return_val = popLlvmValue();
-    fprintf(stderr,"Making return");
-    llvm::Value * ret = builder_->CreateRet(return_val);
-    llvm_value_stack_.push_back(ret);
+    fprintf(stderr,"Making return\n");
+    // llvm::Value * ret = builder_->CreateRet(return_val);
+    builder_->CreateRet(return_val);
+    // llvm_value_stack_.push_back(ret);
 
+    fprintf(stderr,"Finished createing ret %lu", llvm_value_stack_.size());
     module_->print(llvm::errs(), nullptr);
 }
 
 void CodeGenerator::blockStAction(BlockStatementAST * block_node){
-    llvm::BasicBlock *block_statement_entry = llvm::BasicBlock::Create(*context_, "block_statement_entry");
-    builder_->SetInsertPoint(block_statement_entry);
+    fprintf(stderr,"starting a block statement\n");
 
     int llvm_val_stack_size = llvm_value_stack_.size();
 
@@ -414,10 +406,8 @@ void CodeGenerator::blockStAction(BlockStatementAST * block_node){
 
     if(llvm_val_stack_size != llvm_value_stack_.size()){
         fprintf(stderr,"Value stack size not maintained in block\n");
-        throw BError();
+        //throw BError();
     }
-
-    llvm_value_stack_.push_back(block_statement_entry);
 }
 
 void CodeGenerator::callStAction(CallStatementAST * call_node){
@@ -469,8 +459,8 @@ void CodeGenerator::functionAction(FunctionAST * func_node){
     }
 
     fprintf(stderr,"making basic block\n");
-    llvm::BasicBlock *BB = llvm::BasicBlock::Create(*context_, "entry", function);
-    builder_->SetInsertPoint(BB);
+    llvm::BasicBlock *entry_block = llvm::BasicBlock::Create(*context_, "entry", function);
+    builder_->SetInsertPoint(entry_block);
 
     // If args exist, record them in named values here
     named_values_.clear();
@@ -481,15 +471,22 @@ void CodeGenerator::functionAction(FunctionAST * func_node){
         named_values_[arg_name] = alloca;
     }
 
+    llvm::BasicBlock *body_block = llvm::BasicBlock::Create(*context_, "body", function);
+    builder_->CreateBr(body_block);
+    builder_->SetInsertPoint(body_block);
+
     fprintf(stderr,"codegening body\n");
     func_node->bodyAccept(this);
-    llvm::Value * body_ret_val = popLlvmValue();
+    // llvm::BasicBlock * body_block = llvm::dyn_cast<llvm::BasicBlock>(popLlvmValue());
+    // builder_->CreateBr(body_block);
 
     // If we catch an error in the above accept, then erase this function from parent
     // function->eraseFromParent();
 
+    llvm::raw_ostream * output = &llvm::errs();
+
     fprintf(stderr,"verifying the function\n");
-    if(!llvm::verifyFunction(*function)){
+    if(!llvm::verifyFunction(*function, output)){
         fprintf(stderr,"function body not verified.\n");
     }
 
