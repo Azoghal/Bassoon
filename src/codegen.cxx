@@ -302,13 +302,6 @@ void CodeGenerator::callExprAction(CallExprAST * call_node){
         fprintf(stderr,"Unknown function called\n");
         throw BError();
     }
-    std::string fname = callee_func->getName().str();
-    llvm::Argument * arg = callee_func->getArg(0);
-    fprintf(stderr,"farg_name %s\n", arg->getName().str().c_str());
-    fprintf(stderr,"func name is %s\n", fname.c_str());
-
-
-    // TODO Check number of args ...
 
     // codegen the args and pop them off into args vec
     std::vector<llvm::Value *> args_vec;
@@ -323,7 +316,7 @@ void CodeGenerator::callExprAction(CallExprAST * call_node){
         throw BError();
     }
 
-    llvm::Value * call_val = builder_->CreateCall(callee_func,args_vec,"calltmp");
+    builder_->CreateCall(callee_func,args_vec,"calltmp");
 }
 
 void CodeGenerator::unaryExprAction(UnaryExprAST * unary_node){
