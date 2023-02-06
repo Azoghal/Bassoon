@@ -9,26 +9,22 @@
 int main(int argc, char *argv[]){
     bassoon::Parser::setVerbosity(1);
 
-    std::vector<std::unique_ptr<bassoon::NodeAST>>  * ASTs = new std::vector<std::unique_ptr<bassoon::NodeAST>>();
     std::shared_ptr<bassoon::BProgram> program = bassoon::Parser::parseLoop();
 
-    bassoon::viz::VizVisitor * visualiser = new bassoon::viz::VizVisitor("Parse");
-    visualiser->visualiseAST(program);
-    delete visualiser;
+    bassoon::viz::VizVisitor p_visualiser("Parse");
+    p_visualiser.visualiseAST(program);
  
     bassoon::typecheck::TypeVisitor typechecker;
     typechecker.typecheck(program);
 
-    visualiser = new bassoon::viz::VizVisitor("Typecheck");
-    visualiser->visualiseAST(program);
-    delete visualiser;
+    bassoon::viz::VizVisitor tc_visualiser("Typecheck");
+    tc_visualiser.visualiseAST(program);
 
-    bassoon::codegen::CodeGenerator * code_generator = new bassoon::codegen::CodeGenerator();
-    code_generator->DefinePutChar();
-    program->accept(code_generator);
-    code_generator->PrintIR();
-    //code_generator->SetTarget();
-    //code_generator->Compile();
-    delete code_generator;
+    bassoon::codegen::CodeGenerator code_generator;
+    code_generator.DefinePutChar();
+    code_generator.Generate(program);
+    code_generator.PrintIR();
+    code_generator.SetTarget();
+    code_generator.Compile();
     return 0;
 }

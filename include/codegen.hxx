@@ -54,6 +54,7 @@ public:
     void DefinePutChar();
     void PrintIR();
     void Compile();
+    void Generate(std::shared_ptr<BProgram> program);
 
     void boolExprAction(BoolExprAST * bool_node) override;
     void intExprAction(IntExprAST * int_node) override;

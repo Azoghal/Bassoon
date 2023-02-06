@@ -19,6 +19,10 @@ CodeGenerator::CodeGenerator(){
     builder_ = std::make_unique<llvm::IRBuilder<>>(*context_);
 }
 
+void CodeGenerator::Generate(std::shared_ptr<BProgram> program){
+    program->accept(this);
+}
+
 void CodeGenerator::SetTarget(){
     std::string target_triple = llvm::sys::getDefaultTargetTriple();
     if(target_triple != "x86_64-unknown-linux-gnu"){
@@ -256,6 +260,7 @@ void CodeGenerator::Compile(){
 
     pass_manager.run(*module_);
     destination.flush();
+    fprintf(stderr,"finished compile\n");
 }
 
 //--------------------
@@ -268,13 +273,11 @@ void CodeGenerator::boolExprAction(BoolExprAST * bool_node){
 }
 
 void CodeGenerator::intExprAction(IntExprAST * int_node){
-    fprintf(stderr,"making int value %i \n", int_node->getValue());
     llvm::Value * int_const = llvm::ConstantInt::get(llvm::Type::getInt32Ty(*context_),int_node->getValue(),true);
     llvm_value_stack_.push_back(int_const);
 }
 
 void CodeGenerator::doubleExprAction(DoubleExprAST * double_node){
-    fprintf(stderr,"making double value %f \n", double_node->getValue());
     llvm::Value * double_const = llvm::ConstantFP::get(*context_,llvm::APFloat(double_node->getValue()));
     llvm_value_stack_.push_back(double_const);
 }
@@ -293,19 +296,31 @@ void CodeGenerator::variableExprAction(VariableExprAST * variable_node){
 }
 
 void CodeGenerator::callExprAction(CallExprAST * call_node){
+    fprintf(stderr,"CallExprAction\n");
     llvm::Function * callee_func = module_->getFunction(call_node->getName());
     if(!callee_func){
         fprintf(stderr,"Unknown function called\n");
         throw BError();
     }
+    std::string fname = callee_func->getName().str();
+    llvm::Argument * arg = callee_func->getArg(0);
+    fprintf(stderr,"farg_name %s\n", arg->getName().str().c_str());
+    fprintf(stderr,"func name is %s\n", fname.c_str());
+
 
     // TODO Check number of args ...
 
     // codegen the args and pop them off into args vec
     std::vector<llvm::Value *> args_vec;
+    call_node->resetArgIndex();
     while(call_node->anotherArg()){
         call_node->argAcceptOne(this);
         args_vec.push_back(popLlvmValue());
+    }
+
+    if(callee_func->arg_size() != args_vec.size()){
+        fprintf(stderr,"mismatch arg size\n");
+        throw BError();
     }
 
     llvm::Value * call_val = builder_->CreateCall(callee_func,args_vec,"calltmp");
@@ -387,7 +402,6 @@ void CodeGenerator::returnStAction(ReturnStatementAST * return_node){
     // llvm_value_stack_.push_back(ret);
 
     fprintf(stderr,"Finished createing ret %lu", llvm_value_stack_.size());
-    module_->print(llvm::errs(), nullptr);
 }
 
 void CodeGenerator::blockStAction(BlockStatementAST * block_node){
@@ -478,21 +492,21 @@ void CodeGenerator::functionAction(FunctionAST * func_node){
     // If we catch an error in the above accept, then erase this function from parent
     // function->eraseFromParent();
 
-    llvm::raw_ostream * output = &llvm::outs();
-
     fprintf(stderr,"Verifying function %s\n", func_node->getProto().getName().c_str());
-    if(llvm::verifyFunction(*function, output)){
+    if(llvm::verifyFunction(*function)){
         // true indicates errors encountered.
         fprintf(stderr,"function body not verified.\n");
         throw BError();
     }
+
 
     llvm_function_stack_.push_back(function);
 }
 
 void CodeGenerator::topLevelsAction(TopLevels * top_levels_node){
     // setup the main function
-    llvm::FunctionType * func_type = llvm::FunctionType::get(llvm::Type::getVoidTy(*context_), false); 
+    // llvm::FunctionType * func_type = llvm::FunctionType::get(llvm::Type::getVoidTy(*context_), false); 
+    llvm::FunctionType * func_type = llvm::FunctionType::get(llvm::Type::getInt32Ty(*context_), false); 
     llvm::Function * main_function = llvm::Function::Create(func_type, llvm::Function::ExternalLinkage, "main", module_.get());
 
     llvm::BasicBlock *main_entry_block = llvm::BasicBlock::Create(*context_, "main_entry", main_function);
@@ -500,6 +514,16 @@ void CodeGenerator::topLevelsAction(TopLevels * top_levels_node){
 
     // Add to a basic block inside the function
     top_levels_node->statementsAllAccept(this);
+
+    llvm::Value * pass_val = llvm::ConstantInt::get(llvm::Type::getInt32Ty(*context_),0,true);
+    builder_->CreateRet(pass_val);
+
+    fprintf(stderr,"Verifying main function\n");
+    if(llvm::verifyFunction(*main_function)){
+        // true indicates errors encountered.
+        fprintf(stderr,"function body not verified.\n");
+        throw BError();
+    }
 }
 
 void CodeGenerator::funcDefsAction(FuncDefs * func_defs_node){
