@@ -59,10 +59,10 @@ void CodeGenerator::SetTarget(){
 // Helpers
 // ----------------------
 
-llvm::AllocaInst * CodeGenerator::createEntryBlockAlloca(llvm::Function *function, std::string var_name){
+llvm::AllocaInst * CodeGenerator::createEntryBlockAlloca(llvm::Function *function, llvm::Argument * arg){
     // Make an IR builder pointing to first instruction of entry block.
     llvm::IRBuilder<> temp_builder (&function->getEntryBlock(), function->getEntryBlock().begin());
-    return temp_builder.CreateAlloca(llvm::Type::getDoubleTy(*context_),0,var_name.c_str());
+    return temp_builder.CreateAlloca(arg->getType(),0,arg->getName());
 }
 
 llvm::Type * CodeGenerator::convertBType(BType btype){
@@ -268,16 +268,19 @@ void CodeGenerator::Compile(){
 //--------------------
 
 void CodeGenerator::boolExprAction(BoolExprAST * bool_node){
+    fprintf(stderr,"making bool\n");
     llvm::Value * bool_const = llvm::ConstantInt::get(llvm::Type::getInt1Ty(*context_),bool_node->getValue(),false);
     llvm_value_stack_.push_back(bool_const);
 }
 
 void CodeGenerator::intExprAction(IntExprAST * int_node){
+    fprintf(stderr,"making int\n");
     llvm::Value * int_const = llvm::ConstantInt::get(llvm::Type::getInt32Ty(*context_),int_node->getValue(),true);
     llvm_value_stack_.push_back(int_const);
 }
 
 void CodeGenerator::doubleExprAction(DoubleExprAST * double_node){
+    fprintf(stderr,"making double\n");
     llvm::Value * double_const = llvm::ConstantFP::get(*context_,llvm::APFloat(double_node->getValue()));
     llvm_value_stack_.push_back(double_const);
 }
@@ -304,19 +307,31 @@ void CodeGenerator::callExprAction(CallExprAST * call_node){
     }
 
     // codegen the args and pop them off into args vec
+
+    // fprintf(stderr, "starting the arg section\n");
     std::vector<llvm::Value *> args_vec;
-    call_node->resetArgIndex();
-    while(call_node->anotherArg()){
-        call_node->argAcceptOne(this);
-        args_vec.push_back(popLlvmValue());
-    }
+    // call_node->resetArgIndex();
+    // while(call_node->anotherArg()){
+    //     fprintf(stderr,"about to accept an arg\n");
+    //     call_node->argAcceptOne(this);
+    //     llvm::Value * arg_val = popLlvmValue();
+    //     args_vec.push_back(arg_val);
+    // }
+    // fprintf(stderr,"finishing the arg section\n");
+
+    llvm::Value * int_const = llvm::ConstantInt::get(llvm::Type::getInt32Ty(*context_),6,true);
+    llvm::Value * double_const = llvm::ConstantFP::get(*context_,llvm::APFloat(3.5));
+
+    args_vec.push_back(int_const);
+    args_vec.push_back(double_const);
 
     if(callee_func->arg_size() != args_vec.size()){
         fprintf(stderr,"mismatch arg size\n");
         throw BError();
     }
 
-    builder_->CreateCall(callee_func,args_vec,"calltmp");
+    llvm::Value * ret_val = builder_->CreateCall(callee_func,args_vec,"calltmp");
+    llvm_value_stack_.push_back(ret_val);
 }
 
 void CodeGenerator::unaryExprAction(UnaryExprAST * unary_node){
@@ -394,7 +409,7 @@ void CodeGenerator::returnStAction(ReturnStatementAST * return_node){
     builder_->CreateRet(return_val);
     // llvm_value_stack_.push_back(ret);
 
-    fprintf(stderr,"Finished createing ret %lu", llvm_value_stack_.size());
+    fprintf(stderr,"Finished creating ret %lu", llvm_value_stack_.size());
 }
 
 void CodeGenerator::blockStAction(BlockStatementAST * block_node){
@@ -419,8 +434,8 @@ void CodeGenerator::blockStAction(BlockStatementAST * block_node){
 
 void CodeGenerator::callStAction(CallStatementAST * call_node){
     call_node->callAccept(this);
-    // llvm::Value * call_val = popLlvmValue();
-    // llvm_value_stack_.push_back(call_val);
+    llvm::Value * call_val = popLlvmValue();
+    llvm_value_stack_.push_back(call_val);
 }
 
 void CodeGenerator::assignStAction(AssignStatementAST * assign_node){}
@@ -471,7 +486,7 @@ void CodeGenerator::functionAction(FunctionAST * func_node){
     named_values_.clear();
     for(auto &arg : function->args()){
         std::string arg_name = arg.getName().str();
-        llvm::AllocaInst *alloca = createEntryBlockAlloca(function, arg_name);
+        llvm::AllocaInst *alloca = createEntryBlockAlloca(function, &arg);
         builder_->CreateStore(&arg, alloca);
         named_values_[arg_name] = alloca;
     }
