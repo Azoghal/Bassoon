@@ -20,15 +20,18 @@ enum typing_phase {
 class TypeVisitor : public ASTVisitor{
     // enum representing the phase of the typechecker
     typing_phase typecheck_phase_;
+
     // a map of identifier name -> stack of types (allowing ghosting)
     std::map<std::string, std::vector<BType>> identifier_stacks_;
     std::map<std::string, BFType> func_types_;
+
     // return_type_stack_: stack of return type of recently parsed statements
     // only return and block statements push to this stack. A block statement with
     // no return statement within will push the type_void
     std::vector<BType> return_type_stack_;
     BType popReturnType();
     void checkRetStackSize(int original_size);
+    
     // scope_definitions_stack_: a stack of info about scopes - 
     // the identifiers that are defined in them, that need to be 
     // popped off identifier_stacks_ when the scope closes.

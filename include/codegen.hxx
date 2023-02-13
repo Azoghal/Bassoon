@@ -34,10 +34,10 @@ class CodeGenerator : public ASTVisitor {
     llvm::TargetMachine * target_machine_;
 
     std::vector<llvm::Value *> llvm_value_stack_;
-    std::vector<llvm::Function *> llvm_function_stack_;
+    std::vector<llvm::Function *> llvm_proto_stack_;
 
     llvm::Value * popLlvmValue();
-    llvm::Function * popLlvmFunction();
+    llvm::Function * popLlvmProto();
     llvm::Type * convertBType(BType btype);
 
     llvm::AllocaInst * createEntryBlockAlloca(llvm::Function *function, llvm::Argument * arg);
@@ -48,13 +48,11 @@ class CodeGenerator : public ASTVisitor {
     llvm::Value * createDiv(BType res_type, llvm::Value * lhs_val, llvm::Value * rhs_val);
 public:
     CodeGenerator();
-    void SetTarget();
-    void MakeTestIR();
-    void MakeTestMainIR();
-    void DefinePutChar();
-    void PrintIR();
-    void Compile();
-    void Generate(std::shared_ptr<BProgram> program);
+    void setTarget();
+    void definePutChar();
+    void printIR();
+    void compile();
+    void generate(std::shared_ptr<BProgram> program);
 
     void boolExprAction(BoolExprAST * bool_node) override;
     void intExprAction(IntExprAST * int_node) override;

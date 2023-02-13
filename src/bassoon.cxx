@@ -21,10 +21,9 @@ int main(int argc, char *argv[]){
     tc_visualiser.visualiseAST(program);
 
     bassoon::codegen::CodeGenerator code_generator;
-    code_generator.DefinePutChar();
-    code_generator.Generate(program);
-    code_generator.PrintIR();
-    code_generator.SetTarget();
-    code_generator.Compile();
+    code_generator.definePutChar();
+    code_generator.generate(program);
+    code_generator.setTarget();
+    code_generator.compile();
     return 0;
 }

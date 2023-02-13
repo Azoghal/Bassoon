@@ -19,11 +19,11 @@ CodeGenerator::CodeGenerator(){
     builder_ = std::make_unique<llvm::IRBuilder<>>(*context_);
 }
 
-void CodeGenerator::Generate(std::shared_ptr<BProgram> program){
+void CodeGenerator::generate(std::shared_ptr<BProgram> program){
     program->accept(this);
 }
 
-void CodeGenerator::SetTarget(){
+void CodeGenerator::setTarget(){
     std::string target_triple = llvm::sys::getDefaultTargetTriple();
     if(target_triple != "x86_64-unknown-linux-gnu"){
         fprintf(stderr,"Initialising all targets\n");
@@ -86,7 +86,7 @@ llvm::Type * CodeGenerator::convertBType(BType btype){
 
 llvm::Value * CodeGenerator::popLlvmValue(){
     if (!(llvm_value_stack_.size()>0)){
-        fprintf(stderr, "llvm_value_stack over popped");
+        fprintf(stderr, "llvm_value_stack is empty but a pop was attempted\n");
         throw BError();
     }
     llvm::Value * val = llvm_value_stack_[llvm_value_stack_.size()-1];
@@ -95,9 +95,13 @@ llvm::Value * CodeGenerator::popLlvmValue(){
     return val;
 }
 
-llvm::Function * CodeGenerator::popLlvmFunction(){
-    llvm::Function * f = llvm_function_stack_[llvm_function_stack_.size()-1];
-    llvm_function_stack_.pop_back();
+llvm::Function * CodeGenerator::popLlvmProto(){
+    if (!(llvm_proto_stack_.size()>0)){
+        fprintf(stderr, "llvm_proto_stack is empty but a pop was attempted\n");
+        throw BError();
+    }
+    llvm::Function * f = llvm_proto_stack_[llvm_proto_stack_.size()-1];
+    llvm_proto_stack_.pop_back();
     return f;
 }
 
@@ -165,87 +169,18 @@ llvm::Value * CodeGenerator::createDiv(BType res_type, llvm::Value * lhs_val, ll
     }
 }
 
-// void CodeGenerator::MakeTestIR(){
-//     // Test Func is f(x) = x+5;
-//     // nullptr return type - void. not var args
-//     std::vector<llvm::Type*> arg_types;
-//     arg_types.push_back(llvm::Type::getInt32Ty(*context_));
-//     llvm::FunctionType * func_type = llvm::FunctionType::get(llvm::Type::getInt32Ty(*context_), arg_types, false); 
-//     llvm::Function * test_func = llvm::Function::Create(func_type, llvm::Function::ExternalLinkage, "testFun", module_.get());
-
-//     // Set the arg names
-//     std::vector<std::string> arg_names = {"x"};
-//     unsigned i = 0;
-//     for(auto &arg : test_func->args()){
-//         arg.setName(arg_names[i++]);
-//     }
-
-
-//     // Make sure not already defined
-//     if(module_->getFunction("testFun")){
-//         fprintf(stderr,"testFun already defined\n");
-//     }
-
-//     // Body
-//     llvm::BasicBlock *BB = llvm::BasicBlock::Create(*context_, "entry", test_func);
-//     builder_->SetInsertPoint(BB);
-
-//     // If args exist, record them in named values here
-//     named_values_.clear();
-//     for(auto &arg : test_func->args()){
-//         std::string arg_name = arg.getName().str();
-//         named_values_[arg_name] = &arg;
-//     }
-
-//     const int val = 5;
-//     llvm::Value * L = named_values_["x"];
-//     llvm::Value * R = llvm::ConstantInt::get(llvm::Type::getInt32Ty(*context_), 5, true);
-//     llvm::Value * sum = builder_->CreateAdd(L,R,"addTemp");
-//     builder_->CreateRet(sum); 
-// }
-
-// void CodeGenerator::MakeTestMainIR(){
-//     // Test Func is f(x) = x+5;
-//     // nullptr return type - void. not var args
-//     fprintf(stderr,"First");
-//     llvm::FunctionType * func_type = llvm::FunctionType::get(llvm::Type::getVoidTy(*context_), false); 
-//     fprintf(stderr,"Second");
-//     llvm::Function * test_func = llvm::Function::Create(func_type, llvm::Function::ExternalLinkage, "main", module_.get());
-//     fprintf(stderr,"Third");
-
-//     // Make sure not already defined
-//     if(module_->getFunction("main")){
-//         fprintf(stderr,"main already defined\n");
-//     }
-
-//     // Body
-//     llvm::BasicBlock *BB = llvm::BasicBlock::Create(*context_, "entry", test_func);
-//     builder_->SetInsertPoint(BB);
-
-//     std::vector<llvm::Value *> args;
-//     llvm::Value * arg_val = llvm::ConstantInt::get(llvm::Type::getInt32Ty(*context_), 'a', true);
-//     // llvm::Value * arg_val_ptr = llvm::IntToPtrInst(arg_val,llvm::Type::getInt8PtrTy(*context_),)
-//     args.push_back(arg_val);
-//     builder_->CreateCall(module_->getFunction("putchar"),args);
-    
-
-//     const int val = 0;
-//     llvm::Value * result = llvm::ConstantInt::get(llvm::Type::getInt32Ty(*context_), val, true);
-//     builder_->CreateRet(result); 
-// }
-
-void CodeGenerator::DefinePutChar(){
+void CodeGenerator::definePutChar(){
     std::vector<llvm::Type *> arg_types;
     arg_types.push_back(llvm::Type::getInt32Ty(*context_));
     llvm::FunctionType * func_type = llvm::FunctionType::get(llvm::Type::getInt32Ty(*context_), arg_types, false); 
     llvm::Function * func = llvm::Function::Create(func_type, llvm::Function::ExternalLinkage, "putchar", module_.get());
 }
 
-void CodeGenerator::PrintIR(){
+void CodeGenerator::printIR(){
     module_->print(llvm::errs(), nullptr);
 }
 
-void CodeGenerator::Compile(){
+void CodeGenerator::compile(){
     std::string object_filename = "output.o";
     std::error_code EC;
     llvm::raw_fd_ostream destination (object_filename, EC, llvm::sys::fs::OF_None);
@@ -261,11 +196,8 @@ void CodeGenerator::Compile(){
         return;
     }
 
-    fprintf(stderr,"running the module\n");
-
     pass_manager.run(*module_);
     destination.flush();
-    fprintf(stderr,"finished compile\n");
 }
 
 //--------------------
@@ -273,19 +205,16 @@ void CodeGenerator::Compile(){
 //--------------------
 
 void CodeGenerator::boolExprAction(BoolExprAST * bool_node){
-    fprintf(stderr,"making bool\n");
     llvm::Value * bool_const = llvm::ConstantInt::get(llvm::Type::getInt1Ty(*context_),bool_node->getValue(),false);
     llvm_value_stack_.push_back(bool_const);
 }
 
 void CodeGenerator::intExprAction(IntExprAST * int_node){
-    fprintf(stderr,"making int\n");
     llvm::Value * int_const = llvm::ConstantInt::get(llvm::Type::getInt32Ty(*context_),int_node->getValue(),true);
     llvm_value_stack_.push_back(int_const);
 }
 
 void CodeGenerator::doubleExprAction(DoubleExprAST * double_node){
-    fprintf(stderr,"making double\n");
     llvm::Value * double_const = llvm::ConstantFP::get(*context_,llvm::APFloat(double_node->getValue()));
     llvm_value_stack_.push_back(double_const);
 }
@@ -304,7 +233,6 @@ void CodeGenerator::variableExprAction(VariableExprAST * variable_node){
 }
 
 void CodeGenerator::callExprAction(CallExprAST * call_node){
-    fprintf(stderr,"CallExprAction\n");
     llvm::Function * callee_func = module_->getFunction(call_node->getName());
     if(!callee_func){
         fprintf(stderr,"Unknown function called\n");
@@ -312,23 +240,13 @@ void CodeGenerator::callExprAction(CallExprAST * call_node){
     }
 
     // codegen the args and pop them off into args vec
-
     std::vector<llvm::Value *> args_vec;
-    fprintf(stderr, "starting the arg section\n");
     call_node->resetArgIndex();
     while(call_node->anotherArg()){
-        fprintf(stderr,"about to accept an arg\n");
         call_node->argAcceptOne(this);
         llvm::Value * arg_val = popLlvmValue();
         args_vec.push_back(arg_val);
     }
-    fprintf(stderr,"finishing the arg section\n");
-
-    // llvm::Value * int_const = llvm::ConstantInt::get(llvm::Type::getInt32Ty(*context_),6,true);
-    // args_vec.push_back(int_const);
-
-    //llvm::Value * double_const = llvm::ConstantFP::get(*context_,llvm::APFloat(3.5));
-    //args_vec.push_back(double_const);
 
     if(callee_func->arg_size() != args_vec.size()){
         fprintf(stderr,"mismatch arg size\n");
@@ -341,7 +259,6 @@ void CodeGenerator::callExprAction(CallExprAST * call_node){
 
 void CodeGenerator::unaryExprAction(UnaryExprAST * unary_node){
     char op_code = unary_node->getOpCode();
-    // BType type = unary_node->getType();
 
     unary_node->operandAccept(this);
     llvm::Value * operand_val = popLlvmValue();
@@ -406,29 +323,20 @@ void CodeGenerator::whileStAction(WhileStatementAST * while_node){}
 
 void CodeGenerator::returnStAction(ReturnStatementAST * return_node){
     // codegen return value
-    fprintf(stderr,"codegening return %lu \n", llvm_value_stack_.size());
     return_node->returnExprAccept(this);
     llvm::Value * return_val = popLlvmValue();
-    fprintf(stderr,"Making return\n");
-    llvm::Value * ret = builder_->CreateRet(return_val);
-    //builder_->CreateRet(return_val);
-    llvm_value_stack_.push_back(ret);
-
-    fprintf(stderr,"Finished creating ret %lu", llvm_value_stack_.size());
+    builder_->CreateRet(return_val);
 }
 
 void CodeGenerator::blockStAction(BlockStatementAST * block_node){
-    fprintf(stderr,"starting a block statement\n");
-
     int llvm_val_stack_size = llvm_value_stack_.size();
 
     // codegen for each statement, starting from this entry block
-    // need to call all the statements... and make sure they're popped off.
     block_node->resetStatementIndex();
     while(block_node->anotherStatement()){
         block_node->statementAcceptOne(this);
         fprintf(stderr,"popping and discarding a statement in blockstaction\n");
-        popLlvmValue(); // discard the pushed value.
+        //popLlvmValue(); // discard the pushed value.
     }
 
     if(llvm_val_stack_size != llvm_value_stack_.size()){
@@ -485,7 +393,7 @@ void CodeGenerator::prototypeAction(PrototypeAST * proto_node){
         arg.setName(args[i++].first);
     }
 
-    llvm_function_stack_.push_back(func);
+    llvm_proto_stack_.push_back(func);
 }
 
 void CodeGenerator::functionAction(FunctionAST * func_node){
@@ -494,7 +402,7 @@ void CodeGenerator::functionAction(FunctionAST * func_node){
     if(!function){
         fprintf(stderr,"Function not previously declared, accepting proto\n");
         func_node->protoAccept(this);
-        function = popLlvmFunction();
+        function = popLlvmProto();
     }
 
     // TODO VERIFY THAT FUNCTION MATCHES func_node's signature.
@@ -531,14 +439,10 @@ void CodeGenerator::functionAction(FunctionAST * func_node){
         fprintf(stderr,"function body not verified.\n");
         throw BError();
     }
-
-
-    llvm_function_stack_.push_back(function);
 }
 
 void CodeGenerator::topLevelsAction(TopLevels * top_levels_node){
     // setup the main function
-    // llvm::FunctionType * func_type = llvm::FunctionType::get(llvm::Type::getVoidTy(*context_), false); 
     llvm::FunctionType * func_type = llvm::FunctionType::get(llvm::Type::getInt32Ty(*context_), false); 
     llvm::Function * main_function = llvm::Function::Create(func_type, llvm::Function::ExternalLinkage, "main", module_.get());
 
@@ -554,22 +458,20 @@ void CodeGenerator::topLevelsAction(TopLevels * top_levels_node){
     fprintf(stderr,"Verifying main function\n");
     if(llvm::verifyFunction(*main_function)){
         // true indicates errors encountered.
-        fprintf(stderr,"function body not verified.\n");
+        fprintf(stderr,"Main not verified.\n");
         throw BError();
     }
-
 }
 
 void CodeGenerator::funcDefsAction(FuncDefs * func_defs_node){
-    fprintf(stderr,"Actually doing func defs, should be %i\n", func_defs_node->countFuncs());
     func_defs_node->functionsAllAccept(this);
 }
 void CodeGenerator::programAction(BProgram * program_node){
     program_node->funcDefsAccept(this);
-    fprintf(stderr,"finished with funcdefs\n");
+    fprintf(stderr,"Funcdefs COMPLETE\n");
     program_node->topLevelsAccept(this);
-    fprintf(stderr,"finished with toplevels\n");
-    fprintf(stderr,"llvm_value_stack size %lu\n", llvm_value_stack_.size());
+    fprintf(stderr,"Toplevels COMLETE \n");
+    fprintf(stderr,"Final stack size %lu\n", llvm_value_stack_.size());
 }
 
 } // namespace codegen

@@ -63,18 +63,7 @@ TypeVisitor::TypeVisitor(){
 // Public Driving Function
 //------------------------------
 
-// void TypeVisitor::typecheckAST(NodeAST * node){
-//     node->accept(this);
-//     printVarScopes();
-// }
-
 void TypeVisitor::typecheck(std::shared_ptr<BProgram> program){
-    // std::shared_ptr<FuncDefs> func_defs = program->getFuncDefs();
-    // std::shared_ptr<TopLevels> top_levels = program->getTopLevels();
-    // // Typecheck functions and populate function context
-    // typecheckFuncDefs(func_defs);
-    // // Typecheck statements
-    // typecheckTopLevels(top_levels);
     program->accept(this);
 }
 
