@@ -91,7 +91,7 @@ llvm::Value * CodeGenerator::popLlvmValue(){
     }
     llvm::Value * val = llvm_value_stack_[llvm_value_stack_.size()-1];
     llvm_value_stack_.pop_back();
-    fprintf(stderr,"LLVMSTACKSIZE : %lu\n",llvm_value_stack_.size());
+    fprintf(stderr,"POPPED, size: %lu\n",llvm_value_stack_.size());
     return val;
 }
 
@@ -410,9 +410,9 @@ void CodeGenerator::returnStAction(ReturnStatementAST * return_node){
     return_node->returnExprAccept(this);
     llvm::Value * return_val = popLlvmValue();
     fprintf(stderr,"Making return\n");
-    // llvm::Value * ret = builder_->CreateRet(return_val);
-    builder_->CreateRet(return_val);
-    // llvm_value_stack_.push_back(ret);
+    llvm::Value * ret = builder_->CreateRet(return_val);
+    //builder_->CreateRet(return_val);
+    llvm_value_stack_.push_back(ret);
 
     fprintf(stderr,"Finished creating ret %lu", llvm_value_stack_.size());
 }

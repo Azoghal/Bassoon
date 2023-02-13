@@ -55,6 +55,8 @@ std::string tPhaseToStr(typing_phase tp){
 TypeVisitor::TypeVisitor(){
     // push an initially empty top level scope
     scope_definitions_stack_.push_back(std::vector<std::string>());
+    // push language functions
+    addFuncContext("putchar",BFType({type_int},type_int));
 }
 
 //------------------------------
