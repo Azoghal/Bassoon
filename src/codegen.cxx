@@ -110,11 +110,14 @@ llvm::Function * CodeGenerator::popLlvmProto(){
 //------------------------
 
 llvm::Value * CodeGenerator::createAdd(BType res_type, llvm::Value * lhs_val, llvm::Value * rhs_val){
+    fprintf(stderr,"Making an add\n");
     switch(res_type){
     case(type_int):{
+        fprintf(stderr,"int add\n");
         return builder_->CreateAdd(lhs_val,rhs_val,"int_bin_add_temp");
     }
     case(type_double):{
+        fprintf(stderr,"double add\n");
         return builder_->CreateFAdd(lhs_val,rhs_val,"double_bin_add_temp");
     }
     default:{
@@ -157,7 +160,7 @@ llvm::Value * CodeGenerator::createMul(BType res_type, llvm::Value * lhs_val, ll
 llvm::Value * CodeGenerator::createDiv(BType res_type, llvm::Value * lhs_val, llvm::Value * rhs_val){
     switch(res_type){
     case(type_int):{
-        return builder_->CreateSDiv(lhs_val,rhs_val,"int_bin_div_temp");
+        builder_->CreateSDiv(lhs_val,rhs_val,"int_bin_div_temp");
     }
     case(type_double):{
         return builder_->CreateFDiv(lhs_val,rhs_val,"double_bin_div_temp");
@@ -167,6 +170,45 @@ llvm::Value * CodeGenerator::createDiv(BType res_type, llvm::Value * lhs_val, ll
         throw BError();
     }
     }
+}
+
+llvm::Value * CodeGenerator::createLessThan(BType lhs_type, BType rhs_type, llvm::Value * lhs_val, llvm::Value * rhs_val){
+    switch(lhs_type){
+    case(type_int):{
+        switch(rhs_type){
+        case(type_int):{
+            // No cast required, integer comparison
+            return builder_->CreateICmpSLT(lhs_val, rhs_val, "int_cmp");
+            break;
+        }
+        case(type_double):{
+            // need to cast lhs to double for comparison
+            llvm::Value * lhs_double = builder_->CreateIntCast(lhs_val,convertBType(type_double), true, "int_to_double_cast");
+            return builder_->CreateFCmpOLT(lhs_double,rhs_val,"double_cmp");
+            break;
+        }
+        default:break;
+        }
+        break;
+    }
+    case(type_double):{
+        switch(rhs_type){
+        case(type_int):{
+            // need to cast rhs to double
+            llvm::Value * rhs_double = builder_->CreateIntCast(rhs_val,convertBType(type_double), true, "int_to_double_cast");
+            return builder_->CreateFCmpOLT(lhs_val,rhs_double,"double_cmp");
+        }
+        case(type_double):{
+            // no cast needed
+            return builder_->CreateFCmpOLT(lhs_val, rhs_val, "double_cmp");
+        }
+        default:break;
+        }
+    }
+    default:break;
+    }
+    fprintf(stderr," < used on non numerical type\n");
+    throw BError();
 }
 
 void CodeGenerator::definePutChar(){
@@ -283,29 +325,36 @@ void CodeGenerator::unaryExprAction(UnaryExprAST * unary_node){
 
 void CodeGenerator::binaryExprAction(BinaryExprAST * binary_node){
     char op_code = binary_node->getOpCode();
+    fprintf(stderr,"OPCODE: %c", op_code);
     BType res_type = binary_node->getType();
+    BType lhs_type = binary_node->getLHS().getType();
+    BType rhs_type = binary_node->getRHS().getType();
 
     binary_node->lhsAccept(this);
+    llvm::Value * lhs_val = popLlvmValue();
     binary_node->rhsAccept(this);
     llvm::Value * rhs_val = popLlvmValue();
-    llvm::Value * lhs_val = popLlvmValue();
 
     llvm::Value * binary_val;
     switch(op_code){
     case('+'):{
-        createAdd(res_type, lhs_val, rhs_val);
+        binary_val = createAdd(res_type, lhs_val, rhs_val);
         break;
     }
     case('-'):{
-        createSub(res_type, lhs_val, rhs_val);
+        binary_val = createSub(res_type, lhs_val, rhs_val);
         break;
     }
     case('*'):{
-        createMul(res_type, lhs_val, rhs_val);
+        binary_val = createMul(res_type, lhs_val, rhs_val);
         break;
     }
     case('/'):{
-        createDiv(res_type, lhs_val, rhs_val);
+        binary_val = createDiv(res_type, lhs_val, rhs_val);
+        break;
+    }
+    case('<'):{
+        binary_val = createLessThan(lhs_type, rhs_type, lhs_val, rhs_val);
         break;
     }
     default:{
@@ -313,11 +362,50 @@ void CodeGenerator::binaryExprAction(BinaryExprAST * binary_node){
         throw BError(); 
     }
     }
+    fprintf(stderr,"Finished binary makage\n");
     llvm_value_stack_.push_back(binary_val);
 }
 
 
-void CodeGenerator::ifStAction(IfStatementAST * if_node){}
+void CodeGenerator::ifStAction(IfStatementAST * if_node){
+    if_node->condAccept(this);
+    llvm::Value * if_val = popLlvmValue();
+    // check it is bool?
+
+    llvm::Function * parent_function = builder_->GetInsertBlock()->getParent();
+
+    // Passing parent_function also inserts the then block at the end of the function.
+    llvm::BasicBlock * then_block = llvm::BasicBlock::Create(*context_,"then",parent_function); 
+    llvm::BasicBlock * else_block = llvm::BasicBlock::Create(*context_,"else");
+    llvm::BasicBlock * merge_block = llvm::BasicBlock::Create(*context_,"if_continue");
+
+    builder_->CreateCondBr(if_val, then_block, else_block);
+
+    // Move, emit code, and branch to the merge block
+    builder_->SetInsertPoint(then_block);
+    if_node->thenAccept(this); 
+    builder_->CreateBr(merge_block);
+
+    // get up to date then block, if e.g. nested blocks within then.
+    then_block = builder_->GetInsertBlock();
+    
+    // Add else block to end of function and start inserting there.
+    parent_function->getBasicBlockList().push_back(else_block);
+    builder_->SetInsertPoint(else_block);
+
+    if_node->elseAccept(this);
+    builder_->CreateBr(merge_block);
+
+    // get up to date else block.
+    else_block = builder_->GetInsertBlock();
+
+    parent_function->getBasicBlockList().push_back(merge_block);
+    builder_->SetInsertPoint(merge_block);
+    // do not need a phi node as everything handled with stores.
+    //llvm::PHINode * phi = builder_->CreatePHI(...)
+
+}
+
 void CodeGenerator::forStAction(ForStatementAST * for_node){}
 void CodeGenerator::whileStAction(WhileStatementAST * while_node){}
 
@@ -335,13 +423,11 @@ void CodeGenerator::blockStAction(BlockStatementAST * block_node){
     block_node->resetStatementIndex();
     while(block_node->anotherStatement()){
         block_node->statementAcceptOne(this);
-        fprintf(stderr,"popping and discarding a statement in blockstaction\n");
-        //popLlvmValue(); // discard the pushed value.
     }
 
     if(llvm_val_stack_size != llvm_value_stack_.size()){
         fprintf(stderr,"Value stack size not maintained in block\n");
-        //throw BError();
+        throw BError();
     }
 }
 

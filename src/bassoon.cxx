@@ -11,6 +11,8 @@ int main(int argc, char *argv[]){
 
     std::shared_ptr<bassoon::BProgram> program = bassoon::Parser::parseLoop();
 
+    // Either switch back to manual delete to close files after visualisation
+    // or close them earlier than destruction
     bassoon::viz::VizVisitor p_visualiser("Parse");
     p_visualiser.visualiseAST(program);
  
@@ -23,6 +25,7 @@ int main(int argc, char *argv[]){
     bassoon::codegen::CodeGenerator code_generator;
     code_generator.definePutChar();
     code_generator.generate(program);
+    code_generator.printIR();
     code_generator.setTarget();
     code_generator.compile();
     return 0;
