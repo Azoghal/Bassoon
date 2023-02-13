@@ -85,8 +85,13 @@ llvm::Type * CodeGenerator::convertBType(BType btype){
 }
 
 llvm::Value * CodeGenerator::popLlvmValue(){
+    if (!(llvm_value_stack_.size()>0)){
+        fprintf(stderr, "llvm_value_stack over popped");
+        throw BError();
+    }
     llvm::Value * val = llvm_value_stack_[llvm_value_stack_.size()-1];
     llvm_value_stack_.pop_back();
+    fprintf(stderr,"LLVMSTACKSIZE : %lu\n",llvm_value_stack_.size());
     return val;
 }
 
@@ -308,22 +313,22 @@ void CodeGenerator::callExprAction(CallExprAST * call_node){
 
     // codegen the args and pop them off into args vec
 
-    // fprintf(stderr, "starting the arg section\n");
     std::vector<llvm::Value *> args_vec;
-    // call_node->resetArgIndex();
-    // while(call_node->anotherArg()){
-    //     fprintf(stderr,"about to accept an arg\n");
-    //     call_node->argAcceptOne(this);
-    //     llvm::Value * arg_val = popLlvmValue();
-    //     args_vec.push_back(arg_val);
-    // }
-    // fprintf(stderr,"finishing the arg section\n");
+    fprintf(stderr, "starting the arg section\n");
+    call_node->resetArgIndex();
+    while(call_node->anotherArg()){
+        fprintf(stderr,"about to accept an arg\n");
+        call_node->argAcceptOne(this);
+        llvm::Value * arg_val = popLlvmValue();
+        args_vec.push_back(arg_val);
+    }
+    fprintf(stderr,"finishing the arg section\n");
 
-    llvm::Value * int_const = llvm::ConstantInt::get(llvm::Type::getInt32Ty(*context_),6,true);
-    llvm::Value * double_const = llvm::ConstantFP::get(*context_,llvm::APFloat(3.5));
+    // llvm::Value * int_const = llvm::ConstantInt::get(llvm::Type::getInt32Ty(*context_),6,true);
+    // args_vec.push_back(int_const);
 
-    args_vec.push_back(int_const);
-    args_vec.push_back(double_const);
+    //llvm::Value * double_const = llvm::ConstantFP::get(*context_,llvm::APFloat(3.5));
+    //args_vec.push_back(double_const);
 
     if(callee_func->arg_size() != args_vec.size()){
         fprintf(stderr,"mismatch arg size\n");
@@ -434,12 +439,32 @@ void CodeGenerator::blockStAction(BlockStatementAST * block_node){
 
 void CodeGenerator::callStAction(CallStatementAST * call_node){
     call_node->callAccept(this);
-    llvm::Value * call_val = popLlvmValue();
-    llvm_value_stack_.push_back(call_val);
+    popLlvmValue();
+    //llvm::Value * call_val = popLlvmValue();
+    //llvm_value_stack_.push_back(call_val); // call statement with no capture, can discard the value.
 }
 
-void CodeGenerator::assignStAction(AssignStatementAST * assign_node){}
-void CodeGenerator::initStAction(InitStatementAST * init_node){}
+void CodeGenerator::assignStAction(AssignStatementAST * assign_node){
+    assign_node->valueAccept(this);
+    llvm::Value * val_to_assign = popLlvmValue();
+
+    std::string var_name = assign_node->getIdentifier();
+
+    // TODO ensure that var is already initialised.
+
+    llvm::AllocaInst * alloca = named_values_[var_name];
+    builder_->CreateStore(val_to_assign, alloca);
+}
+
+void CodeGenerator::initStAction(InitStatementAST * init_node){
+    //TODO validate that not overwriting.
+    std::string var_name = init_node->getIdentifier();
+    llvm::Type * var_type = convertBType(init_node->getType());
+    llvm::AllocaInst *alloca = builder_->CreateAlloca(var_type, nullptr, var_name);
+    named_values_[var_name] = alloca;
+
+    init_node->assignmentAccept(this);
+}
 
 void CodeGenerator::prototypeAction(PrototypeAST * proto_node){
     std::vector<llvm::Type *> llvm_arg_types;
@@ -532,6 +557,7 @@ void CodeGenerator::topLevelsAction(TopLevels * top_levels_node){
         fprintf(stderr,"function body not verified.\n");
         throw BError();
     }
+
 }
 
 void CodeGenerator::funcDefsAction(FuncDefs * func_defs_node){
@@ -543,7 +569,7 @@ void CodeGenerator::programAction(BProgram * program_node){
     fprintf(stderr,"finished with funcdefs\n");
     program_node->topLevelsAccept(this);
     fprintf(stderr,"finished with toplevels\n");
-
+    fprintf(stderr,"llvm_value_stack size %lu\n", llvm_value_stack_.size());
 }
 
 } // namespace codegen
