@@ -37,7 +37,9 @@ class CodeGenerator : public ASTVisitor {
     std::vector<llvm::Function *> llvm_proto_stack_;
 
     llvm::Value * popLlvmValue();
+    void pushLlvmValue(llvm::Value * val);
     llvm::Function * popLlvmProto();
+    void pushLlvmProto(llvm::Function * proto);
     llvm::Type * convertBType(BType btype);
 
     llvm::AllocaInst * createEntryBlockAlloca(llvm::Function *function, llvm::Argument * arg);

@@ -264,9 +264,9 @@ void VizVisitor::forStAction(ForStatementAST * for_node) {
     std::string step_name = popName();
     addNodeChild(for_name, step_name);
 
-    for_node->endAccept(this);
-    std::string body_name = popName();
-    addNodeChild(for_name, body_name);
+    // for_node->endAccept(this);
+    // std::string body_name = popName();
+    // addNodeChild(for_name, body_name);
 }
 
 void VizVisitor::whileStAction(WhileStatementAST * while_node) {

@@ -13,14 +13,16 @@ int main(int argc, char *argv[]){
 
     // Either switch back to manual delete to close files after visualisation
     // or close them earlier than destruction
-    bassoon::viz::VizVisitor p_visualiser("Parse");
-    p_visualiser.visualiseAST(program);
+    bassoon::viz::VizVisitor * p_visualiser = new bassoon::viz::VizVisitor("Parse");
+    p_visualiser->visualiseAST(program);
+    delete p_visualiser;
  
     bassoon::typecheck::TypeVisitor typechecker;
     typechecker.typecheck(program);
 
-    bassoon::viz::VizVisitor tc_visualiser("Typecheck");
-    tc_visualiser.visualiseAST(program);
+    bassoon::viz::VizVisitor * tc_visualiser = new bassoon::viz::VizVisitor("Typecheck");
+    tc_visualiser->visualiseAST(program);
+    delete tc_visualiser;
 
     bassoon::codegen::CodeGenerator code_generator;
     code_generator.definePutChar();

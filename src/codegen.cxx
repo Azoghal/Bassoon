@@ -95,6 +95,14 @@ llvm::Value * CodeGenerator::popLlvmValue(){
     return val;
 }
 
+void CodeGenerator::pushLlvmValue(llvm::Value * val){
+    if(!val){
+        fprintf(stderr,"Value to be pushed is null\n");
+        throw BError();
+    }
+    llvm_value_stack_.push_back(val);
+}
+
 llvm::Function * CodeGenerator::popLlvmProto(){
     if (!(llvm_proto_stack_.size()>0)){
         fprintf(stderr, "llvm_proto_stack is empty but a pop was attempted\n");
@@ -103,6 +111,14 @@ llvm::Function * CodeGenerator::popLlvmProto(){
     llvm::Function * f = llvm_proto_stack_[llvm_proto_stack_.size()-1];
     llvm_proto_stack_.pop_back();
     return f;
+}
+
+void CodeGenerator::pushLlvmProto(llvm::Function * proto){
+    if(!proto){
+        fprintf(stderr,"Proto to be pushed is null\n");
+        throw BError();
+    }
+    llvm_proto_stack_.push_back(proto);
 }
 
 //------------------------
@@ -248,20 +264,21 @@ void CodeGenerator::compile(){
 
 void CodeGenerator::boolExprAction(BoolExprAST * bool_node){
     llvm::Value * bool_const = llvm::ConstantInt::get(llvm::Type::getInt1Ty(*context_),bool_node->getValue(),false);
-    llvm_value_stack_.push_back(bool_const);
+    pushLlvmValue(bool_const);
 }
 
 void CodeGenerator::intExprAction(IntExprAST * int_node){
     llvm::Value * int_const = llvm::ConstantInt::get(llvm::Type::getInt32Ty(*context_),int_node->getValue(),true);
-    llvm_value_stack_.push_back(int_const);
+    pushLlvmValue(int_const);
 }
 
 void CodeGenerator::doubleExprAction(DoubleExprAST * double_node){
     llvm::Value * double_const = llvm::ConstantFP::get(*context_,llvm::APFloat(double_node->getValue()));
-    llvm_value_stack_.push_back(double_const);
+    pushLlvmValue(double_const);
 }
 
 void CodeGenerator::variableExprAction(VariableExprAST * variable_node){
+    fprintf(stderr,"variable expr action\n");
     std::string name = variable_node->getName();
     std::string loc_str = variable_node->getLocStr();
     llvm::Type * llvm_type = convertBType(variable_node->getType());
@@ -270,8 +287,9 @@ void CodeGenerator::variableExprAction(VariableExprAST * variable_node){
         fprintf(stderr,"Variable name unknown %s at %s",name.c_str(), loc_str.c_str());
         throw BError();
     }
+    // Seg Fault HERE when for loop step uses variable
     llvm::Value * load_val = builder_->CreateLoad(llvm_type, var_val, name.c_str());
-    llvm_value_stack_.push_back(load_val);
+    pushLlvmValue(load_val);
 }
 
 void CodeGenerator::callExprAction(CallExprAST * call_node){
@@ -296,7 +314,7 @@ void CodeGenerator::callExprAction(CallExprAST * call_node){
     }
 
     llvm::Value * ret_val = builder_->CreateCall(callee_func,args_vec,"calltmp");
-    llvm_value_stack_.push_back(ret_val);
+    pushLlvmValue(ret_val);
 }
 
 void CodeGenerator::unaryExprAction(UnaryExprAST * unary_node){
@@ -320,12 +338,11 @@ void CodeGenerator::unaryExprAction(UnaryExprAST * unary_node){
         throw BError(); 
     }
     }
-    llvm_value_stack_.push_back(unary_val);
+    pushLlvmValue(unary_val);
 }
 
 void CodeGenerator::binaryExprAction(BinaryExprAST * binary_node){
     char op_code = binary_node->getOpCode();
-    fprintf(stderr,"OPCODE: %c", op_code);
     BType res_type = binary_node->getType();
     BType lhs_type = binary_node->getLHS().getType();
     BType rhs_type = binary_node->getRHS().getType();
@@ -362,8 +379,7 @@ void CodeGenerator::binaryExprAction(BinaryExprAST * binary_node){
         throw BError(); 
     }
     }
-    fprintf(stderr,"Finished binary makage\n");
-    llvm_value_stack_.push_back(binary_val);
+    pushLlvmValue(binary_val);
 }
 
 
@@ -406,7 +422,45 @@ void CodeGenerator::ifStAction(IfStatementAST * if_node){
 
 }
 
-void CodeGenerator::forStAction(ForStatementAST * for_node){}
+void CodeGenerator::forStAction(ForStatementAST * for_node){
+    // initialise any induction variables etc.
+    for_node->startAccept(this);
+
+    llvm::Function * parent_function = builder_->GetInsertBlock()->getParent();
+    // Remember previous block as flow could come from here...
+    // Unimportant as don't need phi nodes?
+    llvm::BasicBlock * previous_block = builder_->GetInsertBlock();
+    llvm::BasicBlock * loop_cond_block = llvm::BasicBlock::Create(*context_, "loop_condition", parent_function);
+    llvm::BasicBlock * loop_body_block = llvm::BasicBlock::Create(*context_, "loop_body");
+    llvm::BasicBlock * loop_end_block = llvm::BasicBlock::Create(*context_, "loop_end");
+
+    builder_->CreateBr(loop_cond_block); // explicit fall through to loop
+    
+    builder_->SetInsertPoint(loop_cond_block);
+
+    for_node->endAccept(this);
+    llvm::Value * cond_val = popLlvmValue();
+    // While the condition is true, branch to the loop body, else skip
+    builder_->CreateCondBr(cond_val, loop_body_block, loop_end_block);
+    
+    // Insert the body and step code
+    builder_->SetInsertPoint(loop_body_block);
+    for_node->bodyAccept(this);
+
+    // step problems HERE
+    for_node->stepAccept(this);
+    // Check condition for another iteration
+    builder_->CreateBr(loop_cond_block);
+
+    // Add body to end of function
+    parent_function->getBasicBlockList().push_back(loop_body_block);
+
+    // TODO: handle scoping of induction variables?
+    // Add loop end at end of function
+    parent_function->getBasicBlockList().push_back(loop_end_block);
+    builder_->SetInsertPoint(loop_end_block);
+}
+
 void CodeGenerator::whileStAction(WhileStatementAST * while_node){}
 
 void CodeGenerator::returnStAction(ReturnStatementAST * return_node){
@@ -435,7 +489,7 @@ void CodeGenerator::callStAction(CallStatementAST * call_node){
     call_node->callAccept(this);
     popLlvmValue();
     //llvm::Value * call_val = popLlvmValue();
-    //llvm_value_stack_.push_back(call_val); // call statement with no capture, can discard the value.
+    //pushLlvmValue(call_val); // call statement with no capture, can discard the value.
 }
 
 void CodeGenerator::assignStAction(AssignStatementAST * assign_node){
@@ -445,8 +499,9 @@ void CodeGenerator::assignStAction(AssignStatementAST * assign_node){
     std::string var_name = assign_node->getIdentifier();
 
     // TODO ensure that var is already initialised.
-
     llvm::AllocaInst * alloca = named_values_[var_name];
+
+    // Seg Fault HERE if an assignment
     builder_->CreateStore(val_to_assign, alloca);
 }
 
@@ -479,7 +534,7 @@ void CodeGenerator::prototypeAction(PrototypeAST * proto_node){
         arg.setName(args[i++].first);
     }
 
-    llvm_proto_stack_.push_back(func);
+    pushLlvmProto(func);
 }
 
 void CodeGenerator::functionAction(FunctionAST * func_node){
