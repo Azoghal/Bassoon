@@ -193,11 +193,13 @@ llvm::Value * CodeGenerator::createLessThan(BType lhs_type, BType rhs_type, llvm
     case(type_int):{
         switch(rhs_type){
         case(type_int):{
+            fprintf(stderr,"@@ 1 @@\n");
             // No cast required, integer comparison
             return builder_->CreateICmpSLT(lhs_val, rhs_val, "int_cmp");
             break;
         }
         case(type_double):{
+            fprintf(stderr,"@@ 2 @@\n");
             // need to cast lhs to double for comparison
             llvm::Value * lhs_double = builder_->CreateIntCast(lhs_val,convertBType(type_double), true, "int_to_double_cast");
             return builder_->CreateFCmpOLT(lhs_double,rhs_val,"double_cmp");
@@ -210,12 +212,14 @@ llvm::Value * CodeGenerator::createLessThan(BType lhs_type, BType rhs_type, llvm
     case(type_double):{
         switch(rhs_type){
         case(type_int):{
+            fprintf(stderr,"@@ 3 @@\n");
             // need to cast rhs to double
             llvm::Value * rhs_double = builder_->CreateIntCast(rhs_val,convertBType(type_double), true, "int_to_double_cast");
             return builder_->CreateFCmpOLT(lhs_val,rhs_double,"double_cmp");
         }
         case(type_double):{
             // no cast needed
+            fprintf(stderr,"@@ 4 @@\n");
             return builder_->CreateFCmpOLT(lhs_val, rhs_val, "double_cmp");
         }
         default:break;
@@ -278,7 +282,7 @@ void CodeGenerator::doubleExprAction(DoubleExprAST * double_node){
 }
 
 void CodeGenerator::variableExprAction(VariableExprAST * variable_node){
-    fprintf(stderr,"variable expr action\n");
+    fprintf(stderr,"variable expr action %s\n", variable_node->getLocStr().c_str());
     std::string name = variable_node->getName();
     std::string loc_str = variable_node->getLocStr();
     llvm::Type * llvm_type = convertBType(variable_node->getType());
@@ -410,6 +414,7 @@ void CodeGenerator::ifStAction(IfStatementAST * if_node){
     builder_->SetInsertPoint(else_block);
 
     if_node->elseAccept(this);
+    // If last instruction was a return then we can't have two terminators
     builder_->CreateBr(merge_block);
 
     // get up to date else block.
@@ -424,18 +429,21 @@ void CodeGenerator::ifStAction(IfStatementAST * if_node){
 
 void CodeGenerator::forStAction(ForStatementAST * for_node){
     // initialise any induction variables etc.
-    for_node->startAccept(this);
 
     llvm::Function * parent_function = builder_->GetInsertBlock()->getParent();
     // Remember previous block as flow could come from here...
     // Unimportant as don't need phi nodes?
     llvm::BasicBlock * previous_block = builder_->GetInsertBlock();
-    llvm::BasicBlock * loop_cond_block = llvm::BasicBlock::Create(*context_, "loop_condition", parent_function);
+    llvm::BasicBlock * loop_start_block = llvm::BasicBlock::Create(*context_, "loop_start", parent_function);
+    llvm::BasicBlock * loop_cond_block = llvm::BasicBlock::Create(*context_, "loop_condition");
     llvm::BasicBlock * loop_body_block = llvm::BasicBlock::Create(*context_, "loop_body");
     llvm::BasicBlock * loop_end_block = llvm::BasicBlock::Create(*context_, "loop_end");
 
-    builder_->CreateBr(loop_cond_block); // explicit fall through to loop
-    
+    builder_->CreateBr(loop_start_block); // explicit fall through to start
+    builder_->SetInsertPoint(loop_start_block);
+    for_node->startAccept(this);
+    builder_->CreateBr(loop_cond_block);
+    parent_function->getBasicBlockList().push_back(loop_cond_block);
     builder_->SetInsertPoint(loop_cond_block);
 
     for_node->endAccept(this);
@@ -444,6 +452,7 @@ void CodeGenerator::forStAction(ForStatementAST * for_node){
     builder_->CreateCondBr(cond_val, loop_body_block, loop_end_block);
     
     // Insert the body and step code
+    parent_function->getBasicBlockList().push_back(loop_body_block);
     builder_->SetInsertPoint(loop_body_block);
     for_node->bodyAccept(this);
 
@@ -453,7 +462,6 @@ void CodeGenerator::forStAction(ForStatementAST * for_node){
     builder_->CreateBr(loop_cond_block);
 
     // Add body to end of function
-    parent_function->getBasicBlockList().push_back(loop_body_block);
 
     // TODO: handle scoping of induction variables?
     // Add loop end at end of function
@@ -461,7 +469,28 @@ void CodeGenerator::forStAction(ForStatementAST * for_node){
     builder_->SetInsertPoint(loop_end_block);
 }
 
-void CodeGenerator::whileStAction(WhileStatementAST * while_node){}
+void CodeGenerator::whileStAction(WhileStatementAST * while_node){
+    llvm::Function * parent_function = builder_->GetInsertBlock()->getParent();
+
+    llvm::BasicBlock * loop_cond = llvm::BasicBlock::Create(*context_,"while_cond",parent_function);
+    llvm::BasicBlock * loop_body = llvm::BasicBlock::Create(*context_,"while_body");
+    llvm::BasicBlock * loop_end = llvm::BasicBlock::Create(*context_,"while_end");
+
+    builder_->CreateBr(loop_cond);
+
+    builder_->SetInsertPoint(loop_cond);
+    while_node->condAccept(this);
+    llvm::Value * cond_val = popLlvmValue();
+    builder_->CreateCondBr(cond_val,loop_body,loop_end);
+    
+    parent_function->getBasicBlockList().push_back(loop_body);
+    builder_->SetInsertPoint(loop_body);
+    while_node->bodyAccept(this);
+    builder_->CreateBr(loop_cond);
+
+    parent_function->getBasicBlockList().push_back(loop_end);
+    builder_->SetInsertPoint(loop_end);
+}
 
 void CodeGenerator::returnStAction(ReturnStatementAST * return_node){
     // codegen return value
@@ -574,12 +603,18 @@ void CodeGenerator::functionAction(FunctionAST * func_node){
     // If we catch an error in the above accept, then erase this function from parent
     // function->eraseFromParent();
 
+
     fprintf(stderr,"Verifying function %s\n", func_node->getProto().getName().c_str());
+    std::error_code EC;
+    llvm::raw_fd_ostream e ("out/veriErrors", EC, llvm::sys::fs::OF_None);
+    llvm::raw_fd_ostream e2 ("out/veriErrors", EC, llvm::sys::fs::OF_Append);
     if(llvm::verifyFunction(*function)){
         // true indicates errors encountered.
+        this->printIR();
         fprintf(stderr,"function body not verified.\n");
         throw BError();
     }
+    
 }
 
 void CodeGenerator::topLevelsAction(TopLevels * top_levels_node){
@@ -595,6 +630,8 @@ void CodeGenerator::topLevelsAction(TopLevels * top_levels_node){
 
     llvm::Value * pass_val = llvm::ConstantInt::get(llvm::Type::getInt32Ty(*context_),0,true);
     builder_->CreateRet(pass_val);
+
+    this->printIR();
 
     fprintf(stderr,"Verifying main function\n");
     if(llvm::verifyFunction(*main_function)){
