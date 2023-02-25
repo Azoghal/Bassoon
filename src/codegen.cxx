@@ -404,7 +404,10 @@ void CodeGenerator::ifStAction(IfStatementAST * if_node){
     // Move, emit code, and branch to the merge block
     builder_->SetInsertPoint(then_block);
     if_node->thenAccept(this); 
-    builder_->CreateBr(merge_block);
+    llvm::Instruction * term_inst = builder_->GetInsertBlock()->getTerminator();
+    if(!term_inst){
+        builder_->CreateBr(merge_block);
+    }   
 
     // get up to date then block, if e.g. nested blocks within then.
     then_block = builder_->GetInsertBlock();
@@ -414,8 +417,12 @@ void CodeGenerator::ifStAction(IfStatementAST * if_node){
     builder_->SetInsertPoint(else_block);
 
     if_node->elseAccept(this);
-    // If last instruction was a return then we can't have two terminators
-    builder_->CreateBr(merge_block);
+    term_inst = builder_->GetInsertBlock()->getTerminator();
+    // If last instruction was a return (term_inst not null) then don't add second terminator
+    if(!term_inst){
+        builder_->CreateBr(merge_block);
+    }
+    
 
     // get up to date else block.
     else_block = builder_->GetInsertBlock();
@@ -455,11 +462,14 @@ void CodeGenerator::forStAction(ForStatementAST * for_node){
     parent_function->getBasicBlockList().push_back(loop_body_block);
     builder_->SetInsertPoint(loop_body_block);
     for_node->bodyAccept(this);
-
-    // step problems HERE
-    for_node->stepAccept(this);
-    // Check condition for another iteration
-    builder_->CreateBr(loop_cond_block);
+    const llvm::Instruction * term_inst = builder_->GetInsertBlock()->getTerminator();
+    // If return is the last instruction in body, (thus not allowing loops)
+    // then we don't emit the step and branch code.
+    if(!term_inst){
+        for_node->stepAccept(this);
+        // Check condition for another iteration
+        builder_->CreateBr(loop_cond_block);
+    }    
 
     // Add body to end of function
 
@@ -486,7 +496,11 @@ void CodeGenerator::whileStAction(WhileStatementAST * while_node){
     parent_function->getBasicBlockList().push_back(loop_body);
     builder_->SetInsertPoint(loop_body);
     while_node->bodyAccept(this);
-    builder_->CreateBr(loop_cond);
+    llvm::Instruction * term_inst = builder_->GetInsertBlock()->getTerminator();
+    // only add branch back if not already terminated with a return
+    if(!term_inst){
+        builder_->CreateBr(loop_cond);
+    }
 
     parent_function->getBasicBlockList().push_back(loop_end);
     builder_->SetInsertPoint(loop_end);
@@ -630,8 +644,6 @@ void CodeGenerator::topLevelsAction(TopLevels * top_levels_node){
 
     llvm::Value * pass_val = llvm::ConstantInt::get(llvm::Type::getInt32Ty(*context_),0,true);
     builder_->CreateRet(pass_val);
-
-    this->printIR();
 
     fprintf(stderr,"Verifying main function\n");
     if(llvm::verifyFunction(*main_function)){
