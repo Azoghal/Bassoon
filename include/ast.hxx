@@ -89,10 +89,13 @@ public:
     void accept(ASTVisitor * v) override {}
     const BType & getType() const {return type_;}
     void setType(BType known_type){
-        if (type_ == type_unknown && known_type >= 0){// >= 0 includes void...
+        // >= 0 excludes void so for CallExpr this is overrided
+        if (type_ == type_unknown && known_type>=0){
             type_ = known_type;
         } else{
-            fprintf(stderr,"Tried to overwrite known type\n");
+            if(type_!=known_type){
+                fprintf(stderr,"Tried to overwrite known type %s with %s at %s\n",typeToStr(type_).c_str(), typeToStr(known_type).c_str(), getLocStr().c_str());
+            }
         }
     }
 };

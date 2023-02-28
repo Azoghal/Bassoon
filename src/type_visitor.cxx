@@ -299,6 +299,7 @@ void TypeVisitor::callExprAction(CallExprAST * call_node) {
     // Try to type all the args
     call_node->resetArgIndex();
     while(call_node->anotherArg()){
+        fprintf(stderr,"Typing an arg\n");
         call_node->argAcceptOne(this); 
     }
 

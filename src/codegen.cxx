@@ -68,6 +68,9 @@ llvm::AllocaInst * CodeGenerator::createEntryBlockAlloca(llvm::Function *functio
 llvm::Type * CodeGenerator::convertBType(BType btype){
     // Handle function types?
     switch(btype){
+    case(type_void):{
+        return llvm::Type::getVoidTy(*context_);
+    }
     case(type_bool):{
         return llvm::Type::getInt1Ty(*context_);
     }
@@ -176,13 +179,14 @@ llvm::Value * CodeGenerator::createMul(BType res_type, llvm::Value * lhs_val, ll
 llvm::Value * CodeGenerator::createDiv(BType res_type, llvm::Value * lhs_val, llvm::Value * rhs_val){
     switch(res_type){
     case(type_int):{
-        builder_->CreateSDiv(lhs_val,rhs_val,"int_bin_div_temp");
+        return builder_->CreateSDiv(lhs_val,rhs_val,"int_bin_div_temp");
     }
     case(type_double):{
+        fprintf(stderr,"Making float div\n");
         return builder_->CreateFDiv(lhs_val,rhs_val,"double_bin_div_temp");
     }
     default:{
-        fprintf(stderr, "Type is not a valid result of div operation\n");
+        fprintf(stderr, "Type %s is not a valid result of div operation\n", typeToStr(res_type).c_str());
         throw BError();
     }
     }
@@ -297,7 +301,9 @@ void CodeGenerator::variableExprAction(VariableExprAST * variable_node){
 }
 
 void CodeGenerator::callExprAction(CallExprAST * call_node){
+    fprintf(stderr,"starting callExpr\n");
     llvm::Function * callee_func = module_->getFunction(call_node->getName());
+    fprintf(stderr,"got callee\n");
     if(!callee_func){
         fprintf(stderr,"Unknown function called\n");
         throw BError();
@@ -306,18 +312,27 @@ void CodeGenerator::callExprAction(CallExprAST * call_node){
     // codegen the args and pop them off into args vec
     std::vector<llvm::Value *> args_vec;
     call_node->resetArgIndex();
+    fprintf(stderr,"starting args\n");
     while(call_node->anotherArg()){
         call_node->argAcceptOne(this);
         llvm::Value * arg_val = popLlvmValue();
         args_vec.push_back(arg_val);
     }
+    fprintf(stderr,"finisehd args\n");
 
     if(callee_func->arg_size() != args_vec.size()){
         fprintf(stderr,"mismatch arg size\n");
         throw BError();
     }
+    fprintf(stderr,"making call\n");
 
-    llvm::Value * ret_val = builder_->CreateCall(callee_func,args_vec,"calltmp");
+    llvm::Value * ret_val;
+    if (callee_func->getReturnType()->isVoidTy()){
+        ret_val = builder_->CreateCall(callee_func,args_vec);
+    }
+    else{
+        ret_val = builder_->CreateCall(callee_func,args_vec,"calltmp");
+    }
     pushLlvmValue(ret_val);
 }
 
@@ -348,6 +363,7 @@ void CodeGenerator::unaryExprAction(UnaryExprAST * unary_node){
 void CodeGenerator::binaryExprAction(BinaryExprAST * binary_node){
     char op_code = binary_node->getOpCode();
     BType res_type = binary_node->getType();
+    fprintf(stderr,"Binary node result type: %s\n",typeToStr(res_type).c_str());
     BType lhs_type = binary_node->getLHS().getType();
     BType rhs_type = binary_node->getRHS().getType();
 
@@ -588,6 +604,7 @@ void CodeGenerator::functionAction(FunctionAST * func_node){
         func_node->protoAccept(this);
         function = popLlvmProto();
     }
+    fprintf(stderr,"ProtoDone\n");
 
     // TODO VERIFY THAT FUNCTION MATCHES func_node's signature.
 
@@ -614,18 +631,22 @@ void CodeGenerator::functionAction(FunctionAST * func_node){
 
     func_node->bodyAccept(this);
 
-    // If we catch an error in the above accept, then erase this function from parent
-    // function->eraseFromParent();
+    // Handle void functions
+    llvm::Instruction * term_inst = builder_->GetInsertBlock()->getTerminator();
+    if(!term_inst && func_node->getType().getReturnType()==type_void){
+        builder_->CreateRetVoid();
+    }
 
+    // If we catch an error in the above accepts, then erase this function from parent
+    // function->eraseFromParent();
 
     fprintf(stderr,"Verifying function %s\n", func_node->getProto().getName().c_str());
     std::error_code EC;
-    llvm::raw_fd_ostream e ("out/veriErrors", EC, llvm::sys::fs::OF_None);
-    llvm::raw_fd_ostream e2 ("out/veriErrors", EC, llvm::sys::fs::OF_Append);
+
     if(llvm::verifyFunction(*function)){
         // true indicates errors encountered.
         this->printIR();
-        fprintf(stderr,"function body not verified.\n");
+        fprintf(stderr,"function body not verified %s.\n", func_node->getProto().getName().c_str());
         throw BError();
     }
     
@@ -639,8 +660,10 @@ void CodeGenerator::topLevelsAction(TopLevels * top_levels_node){
     llvm::BasicBlock *main_entry_block = llvm::BasicBlock::Create(*context_, "main_entry", main_function);
     builder_->SetInsertPoint(main_entry_block);
 
+    fprintf(stderr,"starting top levels accepts\n");
     // Add to a basic block inside the function
     top_levels_node->statementsAllAccept(this);
+    fprintf(stderr,"finishing top levels accepts\n");
 
     llvm::Value * pass_val = llvm::ConstantInt::get(llvm::Type::getInt32Ty(*context_),0,true);
     builder_->CreateRet(pass_val);
