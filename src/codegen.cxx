@@ -129,14 +129,11 @@ void CodeGenerator::pushLlvmProto(llvm::Function * proto){
 //------------------------
 
 llvm::Value * CodeGenerator::createAdd(BType res_type, llvm::Value * lhs_val, llvm::Value * rhs_val){
-    fprintf(stderr,"Making an add\n");
     switch(res_type){
     case(type_int):{
-        fprintf(stderr,"int add\n");
         return builder_->CreateAdd(lhs_val,rhs_val,"int_bin_add_temp");
     }
     case(type_double):{
-        fprintf(stderr,"double add\n");
         return builder_->CreateFAdd(lhs_val,rhs_val,"double_bin_add_temp");
     }
     default:{
@@ -182,7 +179,6 @@ llvm::Value * CodeGenerator::createDiv(BType res_type, llvm::Value * lhs_val, ll
         return builder_->CreateSDiv(lhs_val,rhs_val,"int_bin_div_temp");
     }
     case(type_double):{
-        fprintf(stderr,"Making float div\n");
         return builder_->CreateFDiv(lhs_val,rhs_val,"double_bin_div_temp");
     }
     default:{
@@ -197,13 +193,11 @@ llvm::Value * CodeGenerator::createLessThan(BType lhs_type, BType rhs_type, llvm
     case(type_int):{
         switch(rhs_type){
         case(type_int):{
-            fprintf(stderr,"@@ 1 @@\n");
             // No cast required, integer comparison
             return builder_->CreateICmpSLT(lhs_val, rhs_val, "int_cmp_lt");
             break;
         }
         case(type_double):{
-            fprintf(stderr,"@@ 2 @@\n");
             // need to cast lhs to double for comparison
             llvm::Value * lhs_double = builder_->CreateIntCast(lhs_val,convertBType(type_double), true, "int_to_double_cast");
             return builder_->CreateFCmpOLT(lhs_double,rhs_val,"double_cmp_lt");
@@ -216,14 +210,12 @@ llvm::Value * CodeGenerator::createLessThan(BType lhs_type, BType rhs_type, llvm
     case(type_double):{
         switch(rhs_type){
         case(type_int):{
-            fprintf(stderr,"@@ 3 @@\n");
             // need to cast rhs to double
             llvm::Value * rhs_double = builder_->CreateIntCast(rhs_val,convertBType(type_double), true, "int_to_double_cast");
             return builder_->CreateFCmpOLT(lhs_val,rhs_double,"double_cmp_lt");
         }
         case(type_double):{
             // no cast needed
-            fprintf(stderr,"@@ 4 @@\n");
             return builder_->CreateFCmpOLT(lhs_val, rhs_val, "double_cmp_lt");
         }
         default:break;
@@ -240,13 +232,11 @@ llvm::Value * CodeGenerator::createGreaterThan(BType lhs_type, BType rhs_type, l
     case(type_int):{
         switch(rhs_type){
         case(type_int):{
-            fprintf(stderr,"@@ 1 @@\n");
             // No cast required, integer comparison
             return builder_->CreateICmpSGT(lhs_val,rhs_val,"int_cmp_gt");
             break;
         }
         case(type_double):{
-            fprintf(stderr,"@@ 2 @@\n");
             // need to cast lhs to double for comparison
             llvm::Value * lhs_double = builder_->CreateIntCast(lhs_val,convertBType(type_double), true, "int_to_double_cast");
             return builder_->CreateFCmpOGT(lhs_double,rhs_val,"double_cmp_gt");
@@ -259,14 +249,12 @@ llvm::Value * CodeGenerator::createGreaterThan(BType lhs_type, BType rhs_type, l
     case(type_double):{
         switch(rhs_type){
         case(type_int):{
-            fprintf(stderr,"@@ 3 @@\n");
             // need to cast rhs to double
             llvm::Value * rhs_double = builder_->CreateIntCast(rhs_val,convertBType(type_double), true, "int_to_double_cast");
             return builder_->CreateFCmpOGT(lhs_val,rhs_double,"double_cmp_gt");
         }
         case(type_double):{
             // no cast needed
-            fprintf(stderr,"@@ 4 @@\n");
             return builder_->CreateFCmpOGT(lhs_val, rhs_val, "double_cmp_gt");
         }
         default:break;
@@ -274,7 +262,7 @@ llvm::Value * CodeGenerator::createGreaterThan(BType lhs_type, BType rhs_type, l
     }
     default:break;
     }
-    fprintf(stderr," < used on non numerical type\n");
+    fprintf(stderr," > used on non numerical type\n");
     throw BError();
 }
 
@@ -329,7 +317,6 @@ void CodeGenerator::doubleExprAction(DoubleExprAST * double_node){
 }
 
 void CodeGenerator::variableExprAction(VariableExprAST * variable_node){
-    fprintf(stderr,"variable expr action %s\n", variable_node->getLocStr().c_str());
     std::string name = variable_node->getName();
     std::string loc_str = variable_node->getLocStr();
     llvm::Type * llvm_type = convertBType(variable_node->getType());
@@ -344,9 +331,7 @@ void CodeGenerator::variableExprAction(VariableExprAST * variable_node){
 }
 
 void CodeGenerator::callExprAction(CallExprAST * call_node){
-    fprintf(stderr,"starting callExpr\n");
     llvm::Function * callee_func = module_->getFunction(call_node->getName());
-    fprintf(stderr,"got callee\n");
     if(!callee_func){
         fprintf(stderr,"Unknown function called\n");
         throw BError();
@@ -355,19 +340,16 @@ void CodeGenerator::callExprAction(CallExprAST * call_node){
     // codegen the args and pop them off into args vec
     std::vector<llvm::Value *> args_vec;
     call_node->resetArgIndex();
-    fprintf(stderr,"starting args\n");
     while(call_node->anotherArg()){
         call_node->argAcceptOne(this);
         llvm::Value * arg_val = popLlvmValue();
         args_vec.push_back(arg_val);
     }
-    fprintf(stderr,"finisehd args\n");
 
     if(callee_func->arg_size() != args_vec.size()){
         fprintf(stderr,"mismatch arg size\n");
         throw BError();
     }
-    fprintf(stderr,"making call\n");
 
     llvm::Value * ret_val;
     if (callee_func->getReturnType()->isVoidTy()){
@@ -388,7 +370,6 @@ void CodeGenerator::unaryExprAction(UnaryExprAST * unary_node){
     llvm::Value * unary_val;
     switch(op_code){
     case('-'):{
-        fprintf(stderr,"NEG TYPE %s", typeToStr(unary_node->getType()).c_str());
         if (unary_node->getType() == type_double){
             unary_val = builder_->CreateFNeg(operand_val,"unary_fneg_temp");
         }
@@ -412,7 +393,6 @@ void CodeGenerator::unaryExprAction(UnaryExprAST * unary_node){
 void CodeGenerator::binaryExprAction(BinaryExprAST * binary_node){
     char op_code = binary_node->getOpCode();
     BType res_type = binary_node->getType();
-    fprintf(stderr,"Binary node result type: %s\n",typeToStr(res_type).c_str());
     BType lhs_type = binary_node->getLHS().getType();
     BType rhs_type = binary_node->getRHS().getType();
 
@@ -650,7 +630,6 @@ void CodeGenerator::functionAction(FunctionAST * func_node){
         func_node->protoAccept(this);
         function = popLlvmProto();
     }
-    fprintf(stderr,"ProtoDone\n");
 
     // TODO VERIFY THAT FUNCTION MATCHES func_node's signature.
 
@@ -686,7 +665,6 @@ void CodeGenerator::functionAction(FunctionAST * func_node){
     // If we catch an error in the above accepts, then erase this function from parent
     // function->eraseFromParent();
 
-    fprintf(stderr,"Verifying function %s\n", func_node->getProto().getName().c_str());
     std::error_code EC;
 
     if(llvm::verifyFunction(*function)){
@@ -706,15 +684,12 @@ void CodeGenerator::topLevelsAction(TopLevels * top_levels_node){
     llvm::BasicBlock *main_entry_block = llvm::BasicBlock::Create(*context_, "main_entry", main_function);
     builder_->SetInsertPoint(main_entry_block);
 
-    fprintf(stderr,"starting top levels accepts\n");
     // Add to a basic block inside the function
     top_levels_node->statementsAllAccept(this);
-    fprintf(stderr,"finishing top levels accepts\n");
 
     llvm::Value * pass_val = llvm::ConstantInt::get(llvm::Type::getInt32Ty(*context_),0,true);
     builder_->CreateRet(pass_val);
 
-    fprintf(stderr,"Verifying main function\n");
     if(llvm::verifyFunction(*main_function)){
         // true indicates errors encountered.
         fprintf(stderr,"Main not verified.\n");
