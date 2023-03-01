@@ -124,6 +124,43 @@ void CodeGenerator::pushLlvmProto(llvm::Function * proto){
     llvm_proto_stack_.push_back(proto);
 }
 
+// -----------------------
+//  Casting
+// -----------------------
+
+llvm::Value * CodeGenerator::createIntToDoubleCast(llvm::Value * int_val){
+    fprintf(stderr,"Casting int to double\n");
+    return builder_->CreateIntCast(int_val,convertBType(type_double), true, "int_to_double_cast");
+}
+llvm::Value * CodeGenerator::createDoubleToIntCast(llvm::Value * double_val){
+    return builder_->CreateFPCast(double_val, convertBType(type_int), "double_to_int_cast");
+}
+
+llvm::Value * CodeGenerator::tryIntToDoubleCast(llvm::Value * maybe_int_val){
+    if(maybe_int_val->getType()->isIntegerTy()){
+        fprintf(stderr,"int cast required\n");
+        return this->createIntToDoubleCast(maybe_int_val);
+    }
+    else if(maybe_int_val->getType()->isFloatingPointTy()){
+        fprintf(stderr,"No int cast required\n");
+        return maybe_int_val;
+    }
+    fprintf(stderr,"Strange type given to tryIntToDoubleCast %i %i\n", maybe_int_val->getType()->isFloatingPointTy(), maybe_int_val->getType()->isIntegerTy());
+    throw BError();
+}
+llvm::Value * CodeGenerator::tryDoubleToIntCast(llvm::Value * maybe_double_val){
+    if(maybe_double_val->getType()->isFloatingPointTy()){
+        fprintf(stderr,"double cast required\n");
+        return this->createDoubleToIntCast(maybe_double_val);
+    }
+    else if(maybe_double_val->getType()->isIntegerTy()){
+        fprintf(stderr,"No double cast required\n");
+        return maybe_double_val;
+    }
+    fprintf(stderr,"Strange type given to tryDoubleToIntCast\n");
+    throw BError();
+}
+
 //------------------------
 // Builder Helpers
 //------------------------
@@ -189,81 +226,27 @@ llvm::Value * CodeGenerator::createDiv(BType res_type, llvm::Value * lhs_val, ll
 }
 
 llvm::Value * CodeGenerator::createLessThan(BType lhs_type, BType rhs_type, llvm::Value * lhs_val, llvm::Value * rhs_val){
-    switch(lhs_type){
-    case(type_int):{
-        switch(rhs_type){
-        case(type_int):{
-            // No cast required, integer comparison
-            return builder_->CreateICmpSLT(lhs_val, rhs_val, "int_cmp_lt");
-            break;
-        }
-        case(type_double):{
-            // need to cast lhs to double for comparison
-            llvm::Value * lhs_double = builder_->CreateIntCast(lhs_val,convertBType(type_double), true, "int_to_double_cast");
-            return builder_->CreateFCmpOLT(lhs_double,rhs_val,"double_cmp_lt");
-            break;
-        }
-        default:break;
-        }
-        break;
+    if(lhs_type == rhs_type && lhs_type == type_int){
+        return builder_->CreateICmpSLT(lhs_val, rhs_val, "int_cmp_lt");
     }
-    case(type_double):{
-        switch(rhs_type){
-        case(type_int):{
-            // need to cast rhs to double
-            llvm::Value * rhs_double = builder_->CreateIntCast(rhs_val,convertBType(type_double), true, "int_to_double_cast");
-            return builder_->CreateFCmpOLT(lhs_val,rhs_double,"double_cmp_lt");
-        }
-        case(type_double):{
-            // no cast needed
-            return builder_->CreateFCmpOLT(lhs_val, rhs_val, "double_cmp_lt");
-        }
-        default:break;
-        }
+    else if(lhs_type == rhs_type && lhs_type == type_double){
+        return builder_->CreateFCmpOLT(lhs_val,rhs_val,"double_cmp_lt");
     }
-    default:break;
+    else{
+        return builder_->CreateFCmpOLT(tryIntToDoubleCast(lhs_val),tryIntToDoubleCast(rhs_val),"double_cmp_lt");
     }
-    fprintf(stderr," < used on non numerical type\n");
-    throw BError();
 }
 
 llvm::Value * CodeGenerator::createGreaterThan(BType lhs_type, BType rhs_type, llvm::Value * lhs_val, llvm::Value * rhs_val){
-    switch(lhs_type){
-    case(type_int):{
-        switch(rhs_type){
-        case(type_int):{
-            // No cast required, integer comparison
-            return builder_->CreateICmpSGT(lhs_val,rhs_val,"int_cmp_gt");
-            break;
-        }
-        case(type_double):{
-            // need to cast lhs to double for comparison
-            llvm::Value * lhs_double = builder_->CreateIntCast(lhs_val,convertBType(type_double), true, "int_to_double_cast");
-            return builder_->CreateFCmpOGT(lhs_double,rhs_val,"double_cmp_gt");
-            break;
-        }
-        default:break;
-        }
-        break;
+    if(lhs_type == rhs_type && lhs_type == type_int){
+        return builder_->CreateICmpSGT(lhs_val, rhs_val, "int_cmp_gt");
     }
-    case(type_double):{
-        switch(rhs_type){
-        case(type_int):{
-            // need to cast rhs to double
-            llvm::Value * rhs_double = builder_->CreateIntCast(rhs_val,convertBType(type_double), true, "int_to_double_cast");
-            return builder_->CreateFCmpOGT(lhs_val,rhs_double,"double_cmp_gt");
-        }
-        case(type_double):{
-            // no cast needed
-            return builder_->CreateFCmpOGT(lhs_val, rhs_val, "double_cmp_gt");
-        }
-        default:break;
-        }
+    else if(lhs_type == rhs_type && lhs_type == type_double){
+        return builder_->CreateFCmpOGT(lhs_val,rhs_val,"double_cmp_gt");
     }
-    default:break;
+    else{
+        return builder_->CreateFCmpOGT(tryIntToDoubleCast(lhs_val),tryIntToDoubleCast(rhs_val),"double_cmp_gt");
     }
-    fprintf(stderr," > used on non numerical type\n");
-    throw BError();
 }
 
 void CodeGenerator::definePutChar(){
@@ -400,6 +383,20 @@ void CodeGenerator::binaryExprAction(BinaryExprAST * binary_node){
     llvm::Value * lhs_val = popLlvmValue();
     binary_node->rhsAccept(this);
     llvm::Value * rhs_val = popLlvmValue();
+
+    // Can replace this with more advanced function with lookup for
+    // which types to use if more types or operators added.
+    fprintf(stderr,"Checking if casts for binop needed\n");
+    if(res_type == type_int){
+        fprintf(stderr,"try doubles to ints\n");
+        lhs_val = tryDoubleToIntCast(lhs_val);
+        rhs_val = tryDoubleToIntCast(rhs_val);
+    }
+    else if(res_type == type_double){
+        fprintf(stderr,"try int to doubbles\n");
+        lhs_val = tryIntToDoubleCast(lhs_val);
+        rhs_val = tryIntToDoubleCast(rhs_val);
+    }
 
     llvm::Value * binary_val;
     switch(op_code){
