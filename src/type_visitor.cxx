@@ -377,7 +377,10 @@ void TypeVisitor::binaryExprAction(BinaryExprAST * binary_node) {
     BType rhs_type = rhs.getType();
     BType result_type = type_unknown;
     std::vector<BFType> possible_types = binary_operators[opcode];
-
+    if(possible_types.size() == 0){
+        fprintf(stderr,"unknown binary operator in typpecheck phase, %s %c\n", binary_node->getLocStr().c_str(), opcode);
+        throw BError();
+    }
     for (BFType f_type: possible_types){
         auto f_arg_types = f_type.getArgumentTypes();
         if (f_type.getArgCount() == 2 && f_arg_types[0] == lhs_type && f_arg_types[1] == rhs_type){

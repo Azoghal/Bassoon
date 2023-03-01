@@ -199,14 +199,14 @@ llvm::Value * CodeGenerator::createLessThan(BType lhs_type, BType rhs_type, llvm
         case(type_int):{
             fprintf(stderr,"@@ 1 @@\n");
             // No cast required, integer comparison
-            return builder_->CreateICmpSLT(lhs_val, rhs_val, "int_cmp");
+            return builder_->CreateICmpSLT(lhs_val, rhs_val, "int_cmp_lt");
             break;
         }
         case(type_double):{
             fprintf(stderr,"@@ 2 @@\n");
             // need to cast lhs to double for comparison
             llvm::Value * lhs_double = builder_->CreateIntCast(lhs_val,convertBType(type_double), true, "int_to_double_cast");
-            return builder_->CreateFCmpOLT(lhs_double,rhs_val,"double_cmp");
+            return builder_->CreateFCmpOLT(lhs_double,rhs_val,"double_cmp_lt");
             break;
         }
         default:break;
@@ -219,12 +219,55 @@ llvm::Value * CodeGenerator::createLessThan(BType lhs_type, BType rhs_type, llvm
             fprintf(stderr,"@@ 3 @@\n");
             // need to cast rhs to double
             llvm::Value * rhs_double = builder_->CreateIntCast(rhs_val,convertBType(type_double), true, "int_to_double_cast");
-            return builder_->CreateFCmpOLT(lhs_val,rhs_double,"double_cmp");
+            return builder_->CreateFCmpOLT(lhs_val,rhs_double,"double_cmp_lt");
         }
         case(type_double):{
             // no cast needed
             fprintf(stderr,"@@ 4 @@\n");
-            return builder_->CreateFCmpOLT(lhs_val, rhs_val, "double_cmp");
+            return builder_->CreateFCmpOLT(lhs_val, rhs_val, "double_cmp_lt");
+        }
+        default:break;
+        }
+    }
+    default:break;
+    }
+    fprintf(stderr," < used on non numerical type\n");
+    throw BError();
+}
+
+llvm::Value * CodeGenerator::createGreaterThan(BType lhs_type, BType rhs_type, llvm::Value * lhs_val, llvm::Value * rhs_val){
+    switch(lhs_type){
+    case(type_int):{
+        switch(rhs_type){
+        case(type_int):{
+            fprintf(stderr,"@@ 1 @@\n");
+            // No cast required, integer comparison
+            return builder_->CreateICmpSGT(lhs_val,rhs_val,"int_cmp_gt");
+            break;
+        }
+        case(type_double):{
+            fprintf(stderr,"@@ 2 @@\n");
+            // need to cast lhs to double for comparison
+            llvm::Value * lhs_double = builder_->CreateIntCast(lhs_val,convertBType(type_double), true, "int_to_double_cast");
+            return builder_->CreateFCmpOGT(lhs_double,rhs_val,"double_cmp_gt");
+            break;
+        }
+        default:break;
+        }
+        break;
+    }
+    case(type_double):{
+        switch(rhs_type){
+        case(type_int):{
+            fprintf(stderr,"@@ 3 @@\n");
+            // need to cast rhs to double
+            llvm::Value * rhs_double = builder_->CreateIntCast(rhs_val,convertBType(type_double), true, "int_to_double_cast");
+            return builder_->CreateFCmpOGT(lhs_val,rhs_double,"double_cmp_gt");
+        }
+        case(type_double):{
+            // no cast needed
+            fprintf(stderr,"@@ 4 @@\n");
+            return builder_->CreateFCmpOGT(lhs_val, rhs_val, "double_cmp_gt");
         }
         default:break;
         }
@@ -398,6 +441,10 @@ void CodeGenerator::binaryExprAction(BinaryExprAST * binary_node){
     }
     case('<'):{
         binary_val = createLessThan(lhs_type, rhs_type, lhs_val, rhs_val);
+        break;
+    }
+    case('>'):{
+        binary_val = createGreaterThan(lhs_type, rhs_type, lhs_val, rhs_val);
         break;
     }
     default:{

@@ -49,6 +49,7 @@ class CodeGenerator : public ASTVisitor {
     llvm::Value * createMul(BType res_type, llvm::Value * lhs_val, llvm::Value * rhs_val);
     llvm::Value * createDiv(BType res_type, llvm::Value * lhs_val, llvm::Value * rhs_val);
     llvm::Value * createLessThan(BType lhs_type, BType rhs_type, llvm::Value * lhs_val, llvm::Value * rhs_val);
+    llvm::Value * createGreaterThan(BType lhs_type, BType rhs_type, llvm::Value * lhs_val, llvm::Value * rhs_val);
 public:
     CodeGenerator();
     void setTarget();

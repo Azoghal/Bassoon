@@ -63,6 +63,14 @@ std::map<char, std::vector<BFType>> binary_operators =
             {BFType(std::vector<BType>({type_double,type_int}),type_bool)},
         }
     },
+    {'>', 
+        {
+            {BFType(std::vector<BType>({type_int,type_int}), type_bool)},
+            {BFType(std::vector<BType>({type_double,type_double}),type_bool)},
+            {BFType(std::vector<BType>({type_int,type_double}),type_bool)},
+            {BFType(std::vector<BType>({type_double,type_int}),type_bool)},
+        }
+    },
 };
 
 } // namespace bassoon
