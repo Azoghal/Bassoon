@@ -426,14 +426,16 @@ std::unique_ptr<StatementAST> Parser::parseIfStatement(){
     if(!then)
         return LogErrorS("Expect statement block after condition.");
     
+    bool has_else = false;
     if(current_token_ == tok_else){
+        has_else=true;
         getNextToken(); // consume tok_else
         elsewise = parseBlockStatement();
         if (!elsewise)
             return LogErrorS("Expected statement block after else");
     }
 
-    return std::make_unique<IfStatementAST>(if_loc, std::move(cond), std::move(then), std::move(elsewise));
+    return std::make_unique<IfStatementAST>(if_loc, std::move(cond), std::move(then), std::move(elsewise), has_else);
 }
 
 std::unique_ptr<StatementAST> Parser::parseForStatement(){

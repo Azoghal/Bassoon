@@ -421,7 +421,8 @@ void CodeGenerator::ifStAction(IfStatementAST * if_node){
     llvm::BasicBlock * else_block = llvm::BasicBlock::Create(*context_,"else");
     llvm::BasicBlock * merge_block = llvm::BasicBlock::Create(*context_,"if_continue");
 
-    builder_->CreateCondBr(if_val, then_block, else_block);
+    // Branch to else block if it exists, else jump straight to merge.
+    builder_->CreateCondBr(if_val, then_block, if_node->getHasElse()? else_block : merge_block);
 
     // Move, emit code, and branch to the merge block
     builder_->SetInsertPoint(then_block);
@@ -430,30 +431,22 @@ void CodeGenerator::ifStAction(IfStatementAST * if_node){
     if(!term_inst){
         builder_->CreateBr(merge_block);
     }   
-
-    // get up to date then block, if e.g. nested blocks within then.
-    then_block = builder_->GetInsertBlock();
     
-    // Add else block to end of function and start inserting there.
-    parent_function->getBasicBlockList().push_back(else_block);
-    builder_->SetInsertPoint(else_block);
+    if(if_node->getHasElse()){
+        // Add else block to end of function and start inserting there.
+        parent_function->getBasicBlockList().push_back(else_block);
+        builder_->SetInsertPoint(else_block);
 
-    if_node->elseAccept(this);
-    term_inst = builder_->GetInsertBlock()->getTerminator();
-    // If last instruction was a return (term_inst not null) then don't add second terminator
-    if(!term_inst){
-        builder_->CreateBr(merge_block);
+        if_node->elseAccept(this);
+        term_inst = builder_->GetInsertBlock()->getTerminator();
+        // If last instruction was a return (term_inst not null) then don't add second terminator
+        if(!term_inst){
+            builder_->CreateBr(merge_block);
+        }
     }
-    
-
-    // get up to date else block.
-    else_block = builder_->GetInsertBlock();
 
     parent_function->getBasicBlockList().push_back(merge_block);
     builder_->SetInsertPoint(merge_block);
-    // do not need a phi node as everything handled with stores.
-    //llvm::PHINode * phi = builder_->CreatePHI(...)
-
 }
 
 void CodeGenerator::forStAction(ForStatementAST * for_node){

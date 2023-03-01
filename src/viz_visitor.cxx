@@ -11,7 +11,7 @@ VizVisitor::VizVisitor(std::string phase){
     phase_ = phase;
     output_filename_ = "../out/AST_Trees" + phase_ + ".dot";
     output_ = std::ofstream(output_filename_, std::ofstream::out);
-    node_base_names_ = std::set<std::string>({"Init","Bool","Int","Double","intType","boolType","doubleType","Var","Assign","CallSt","Return","Func","Proto","ProtoArg","ProtoRet","Block","CallExpr", "Binary", "FuncDefs","TopLevels"});
+    node_base_names_ = std::set<std::string>({"Init","Bool","Int","Double","intType","boolType","doubleType","Var","Assign","CallSt", "If","For","While","Return","Func","Proto","ProtoArg","ProtoRet","Block","CallExpr", "Binary", "FuncDefs","TopLevels"});
 }
 
 VizVisitor::~VizVisitor(){
@@ -242,9 +242,12 @@ void VizVisitor::ifStAction(IfStatementAST * if_node) {
     std::string then_name = popName();
     addNodeChild(if_name, then_name);
 
-    if_node->elseAccept(this);
-    std::string else_name = popName();
-    addNodeChild(if_name, else_name);
+    if(if_node->getHasElse()){
+        if_node->elseAccept(this);
+        std::string else_name = popName();
+        addNodeChild(if_name, else_name);
+    }
+    
 }
 
 void VizVisitor::forStAction(ForStatementAST * for_node) {

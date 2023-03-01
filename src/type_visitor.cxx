@@ -420,13 +420,16 @@ void TypeVisitor::ifStAction(IfStatementAST * if_node){
     auto then_node = if_node->getThen();
     BType then_ret_type = popReturnType();
 
-    if_node->elseAccept(this);
-    auto else_node = if_node->getElse();
-    BType else_ret_type = popReturnType();
+    BType else_ret_type = type_void;
+    if(if_node->getHasElse()){
+        if_node->elseAccept(this);
+        auto else_node = if_node->getElse();
+        BType else_ret_type = popReturnType();
+    }
 
     checkRetStackSize(original_ret_size);
 
-    if(then_ret_type != type_void && else_ret_type != type_void ){
+    if(then_ret_type != type_void && else_ret_type != type_void){
         if(then_ret_type == else_ret_type){
             // both have a return and they match
             return_type_stack_.push_back(else_ret_type);

@@ -214,16 +214,19 @@ public:
 class IfStatementAST : public StatementAST {
     std::unique_ptr<ExprAST> cond_;
     std::unique_ptr<StatementAST> then_, else_;
+    //std::vector<std::unique_ptr<StatementAST>> elseifs?
+    bool has_else_;
 public:
-    IfStatementAST(SourceLoc loc, std::unique_ptr<ExprAST> cond, std::unique_ptr<StatementAST> then, std::unique_ptr<StatementAST> elsewise) 
-        : StatementAST(loc), cond_(std::move(cond)), then_(std::move(then)), else_(std::move(elsewise)) {};
+    IfStatementAST(SourceLoc loc, std::unique_ptr<ExprAST> cond, std::unique_ptr<StatementAST> then, std::unique_ptr<StatementAST> elsewise, bool has_else) 
+        : StatementAST(loc), cond_(std::move(cond)), then_(std::move(then)), else_(std::move(elsewise)), has_else_(has_else) {};
     void accept(ASTVisitor * v) override {v->ifStAction(this);};
     const ExprAST & getCond() const {return  *cond_;}
     const StatementAST & getThen() const {return  *then_;}
     const StatementAST & getElse() const {return  *else_;}
     void condAccept(ASTVisitor * v){cond_->accept(v);}
     void thenAccept(ASTVisitor * v){then_->accept(v);}
-    void elseAccept(ASTVisitor * v){else_->accept(v);}
+    void elseAccept(ASTVisitor * v){if(!has_else_){fprintf(stderr,"don't have an else clause\n");};else_->accept(v);}
+    bool getHasElse(){return has_else_;}
 };
 
 class ForStatementAST : public StatementAST {
