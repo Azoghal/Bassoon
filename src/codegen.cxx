@@ -345,7 +345,13 @@ void CodeGenerator::unaryExprAction(UnaryExprAST * unary_node){
     llvm::Value * unary_val;
     switch(op_code){
     case('-'):{
-        unary_val = builder_->CreateNeg(operand_val,"unary_neg_temp");
+        fprintf(stderr,"NEG TYPE %s", typeToStr(unary_node->getType()).c_str());
+        if (unary_node->getType() == type_double){
+            unary_val = builder_->CreateFNeg(operand_val,"unary_fneg_temp");
+        }
+        else{
+            unary_val = builder_->CreateNeg(operand_val,"unary_neg_temp");
+        }
         break;
     }
     case('!'):{
