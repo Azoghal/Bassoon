@@ -1,5 +1,5 @@
 # Bassoon
-Practice language frontend using LLVM.
+Small procedural language frontend generating LLVM IR.
 
 ## Aims
 - `bool`, `int`, `double` types
