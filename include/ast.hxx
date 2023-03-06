@@ -156,6 +156,7 @@ class CallExprAST : public ExprAST {
     std::string callee_;
     std::vector<std::unique_ptr<ExprAST>> args_;
     int arg_index_ = 0;
+    BFType callee_type_;
 public:
     CallExprAST(SourceLoc loc, const std::string &callee, std::vector<std::unique_ptr<ExprAST>> args) 
         : ExprAST(loc), callee_(callee), args_(std::move(args)) {};
@@ -165,6 +166,8 @@ public:
     bool anotherArg() const {return arg_index_ < args_.size();}
     const ExprAST & getOneArg(){return *args_[arg_index_++];}
     void argAcceptOne(ASTVisitor * v){args_[arg_index_++]->accept(v);}
+    void setCalleeType(BFType f_type){callee_type_ = f_type;}
+    BFType getCalleeType(){return callee_type_;};
 };
 
 //-----------------------

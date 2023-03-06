@@ -295,6 +295,7 @@ void TypeVisitor::callExprAction(CallExprAST * call_node) {
     }
     
     BFType func_type = funcContext(func_name);
+    call_node->setCalleeType(func_type);
 
     // Try to type all the args
     call_node->resetArgIndex();
@@ -308,13 +309,20 @@ void TypeVisitor::callExprAction(CallExprAST * call_node) {
     call_node->resetArgIndex();
     for(int arg_i=0; call_node->anotherArg(); ++arg_i){
         auto arg_expr = call_node->getOneArg();
-        if(arg_expr.getType() != expected_arg_types[arg_i]){
+        BType arg_expr_type = arg_expr.getType();
+        BType expected_type = expected_arg_types[arg_i];
+        if(arg_expr_type != expected_type){
             std::string arg_type_str = 
                 "Exp: " + typeToStr(expected_arg_types[arg_i])
                 + "Actual: " + typeToStr(arg_expr.getType())
                 + arg_expr.getLocStr();
             typingMessage("Arg doesn't match", func_name, arg_type_str);
-            throw BError();
+            if(isCastable(arg_expr_type, expected_type)){
+                typingMessage("Allowing cast");
+            }
+            else{
+                throw BError();
+            }
         }
     }
     call_node->setType(func_type.getReturnType());

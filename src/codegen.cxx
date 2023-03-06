@@ -87,6 +87,20 @@ llvm::Type * CodeGenerator::convertBType(BType btype){
     }
 }
 
+
+BType CodeGenerator::convertLlvmType(llvm::Type * type){
+    if(type==convertBType(type_bool)){
+        return type_bool;
+    }
+    else if(type==convertBType(type_int)){
+        return type_int;
+    }else if(type==convertBType(type_double)){
+        return type_double;
+    }
+    fprintf(stderr,"Unknown llvm type to convert to BType\n");
+    throw BError();
+}
+
 llvm::Value * CodeGenerator::popLlvmValue(){
     if (!(llvm_value_stack_.size()>0)){
         fprintf(stderr, "llvm_value_stack is empty but a pop was attempted\n");
@@ -338,11 +352,24 @@ void CodeGenerator::callExprAction(CallExprAST * call_node){
     }
 
     // codegen the args and pop them off into args vec
+    std::vector<BType> callee_arg_types = call_node->getCalleeType().getArgumentTypes();
     std::vector<llvm::Value *> args_vec;
     call_node->resetArgIndex();
-    while(call_node->anotherArg()){
+    for(int i = 0; call_node->anotherArg(); i++){
         call_node->argAcceptOne(this);
         llvm::Value * arg_val = popLlvmValue();
+        BType arg_type = convertLlvmType(arg_val->getType());
+        BType expected_type = callee_arg_types[i];
+        if(arg_type != expected_type){
+            fprintf(stderr,"arg type not a match %s expected: %s", typeToStr(arg_type).c_str(), typeToStr(expected_type).c_str());
+            if(isCastable(arg_type,expected_type)){
+                fprintf(stderr,"creating cast\n");
+                arg_val = createCast(arg_val,expected_type);
+            }
+            else{
+                throw BError();
+            }
+        }
         args_vec.push_back(arg_val);
     }
 
