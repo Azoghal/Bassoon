@@ -35,3 +35,9 @@ def fancyFunc(a of int, b of double) gives int as {
     return -1
 }
 ```
+
+```bash
+cd build/bin
+./Bassoon < <file path>
+clang output.o -o <executable name>
+```

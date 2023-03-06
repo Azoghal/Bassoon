@@ -6,9 +6,9 @@
 namespace bassoon{
 
 enum BType {
-    type_void = -2,
-    not_a_type = -1,
-    type_unknown = 0,
+    not_a_type = -2,
+    type_unknown = -1,
+    type_void = 0,
     type_bool = 1,
     type_int = 2,
     type_double = 3,
@@ -38,6 +38,24 @@ static std::string typeToStr(int t){
     default: return "not a type";
     }
 }
+
+static bool isCastable(BType origin, BType destination){
+    switch(origin){
+    case(type_bool):{
+        return false;
+    }
+    case(type_int):{
+        return destination == type_double;
+    }
+    case(type_double):{
+        return destination == type_int;
+    }
+    default:{
+        return false;
+    }
+    }
+}
+
 
 } // end namespace bassoon
 

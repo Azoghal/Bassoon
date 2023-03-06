@@ -1,0 +1,9 @@
+outer of int = 4;
+{
+    outer of double = 4.9;
+    inner of bool = true;
+    {
+        inner of double = 1.9;
+        return outer + inner;
+    }
+}

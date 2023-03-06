@@ -20,15 +20,18 @@ enum typing_phase {
 class TypeVisitor : public ASTVisitor{
     // enum representing the phase of the typechecker
     typing_phase typecheck_phase_;
+
     // a map of identifier name -> stack of types (allowing ghosting)
     std::map<std::string, std::vector<BType>> identifier_stacks_;
     std::map<std::string, BFType> func_types_;
+
     // return_type_stack_: stack of return type of recently parsed statements
     // only return and block statements push to this stack. A block statement with
     // no return statement within will push the type_void
     std::vector<BType> return_type_stack_;
     BType popReturnType();
     void checkRetStackSize(int original_size);
+    
     // scope_definitions_stack_: a stack of info about scopes - 
     // the identifiers that are defined in them, that need to be 
     // popped off identifier_stacks_ when the scope closes.
@@ -41,7 +44,7 @@ class TypeVisitor : public ASTVisitor{
     bool isInCurrentScope(std::string candidate_id);
 
     BType typeContext(std::string identifier); // get the type of an identifier in current scope.
-    BFType funcContext(std::string func_name); // need a new return type?? would probs help in all sorts of places
+    BFType funcContext(std::string func_name); 
     void addTypeContext(std::string identifier, BType type){identifier_stacks_[identifier].push_back(type);}
     void addFuncContext(std::string func_name, BFType type){func_types_[func_name] = type;}
     bool isInFuncContext(std::string candidate_f){for (auto f: func_types_){if(f.first==candidate_f){return true;}}return false;}
@@ -88,4 +91,4 @@ public:
 } // namespace typecheck
 } // namespace bassoon
 
-#endif // Bassoon_include_type_visitor_HXX
+#endif // Bassoon_include_type_visitor_HXXA

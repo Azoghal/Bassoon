@@ -89,10 +89,13 @@ public:
     void accept(ASTVisitor * v) override {}
     const BType & getType() const {return type_;}
     void setType(BType known_type){
-        if (type_ == type_unknown && known_type >= 0){// >= 0 includes void...
+        // >= 0 excludes void so for CallExpr this is overrided
+        if (type_ == type_unknown && known_type>=0){
             type_ = known_type;
         } else{
-            fprintf(stderr,"Tried to overwrite known type\n");
+            if(type_!=known_type){
+                fprintf(stderr,"Tried to overwrite known type %s with %s at %s\n",typeToStr(type_).c_str(), typeToStr(known_type).c_str(), getLocStr().c_str());
+            }
         }
     }
 };
@@ -123,7 +126,7 @@ public:
     IntExprAST(SourceLoc loc, int value) 
         : ValueExprAST(loc, type_int), value_(value) {};
     void accept(ASTVisitor * v) override {v->intExprAction(this);}
-    bool getValue() const {return value_;}
+    int getValue() const {return value_;}
 };
 
 class DoubleExprAST : public ValueExprAST{
@@ -132,7 +135,7 @@ public:
     DoubleExprAST(SourceLoc loc, double value) 
         : ValueExprAST(loc, type_double), value_(value) {};
     void accept(ASTVisitor * v) override {v->doubleExprAction(this);}
-    bool getValue() const {return value_;}
+    double getValue() const {return value_;}
 };
 
 //-----------------------
@@ -211,16 +214,19 @@ public:
 class IfStatementAST : public StatementAST {
     std::unique_ptr<ExprAST> cond_;
     std::unique_ptr<StatementAST> then_, else_;
+    //std::vector<std::unique_ptr<StatementAST>> elseifs?
+    bool has_else_;
 public:
-    IfStatementAST(SourceLoc loc, std::unique_ptr<ExprAST> cond, std::unique_ptr<StatementAST> then, std::unique_ptr<StatementAST> elsewise) 
-        : StatementAST(loc), cond_(std::move(cond)), then_(std::move(then)), else_(std::move(elsewise)) {};
+    IfStatementAST(SourceLoc loc, std::unique_ptr<ExprAST> cond, std::unique_ptr<StatementAST> then, std::unique_ptr<StatementAST> elsewise, bool has_else) 
+        : StatementAST(loc), cond_(std::move(cond)), then_(std::move(then)), else_(std::move(elsewise)), has_else_(has_else) {};
     void accept(ASTVisitor * v) override {v->ifStAction(this);};
     const ExprAST & getCond() const {return  *cond_;}
     const StatementAST & getThen() const {return  *then_;}
     const StatementAST & getElse() const {return  *else_;}
     void condAccept(ASTVisitor * v){cond_->accept(v);}
     void thenAccept(ASTVisitor * v){then_->accept(v);}
-    void elseAccept(ASTVisitor * v){else_->accept(v);}
+    void elseAccept(ASTVisitor * v){if(!has_else_){fprintf(stderr,"don't have an else clause\n");};else_->accept(v);}
+    bool getHasElse(){return has_else_;}
 };
 
 class ForStatementAST : public StatementAST {
@@ -287,6 +293,12 @@ public:
     bool anotherStatement(){return statement_index_ < statements_.size();};
     const StatementAST & getOneStatement() {return *statements_[statement_index_++];}
     void statementAcceptOne(ASTVisitor *  v){statements_[statement_index_++]->accept(v);}
+    // void statementAcceptAll(ASTVisitor * v){
+    //     resetStatementIndex();
+    //     while(anotherStatement()){
+    //         statementAcceptOne(v);
+    //     }
+    // }
     bool hasReturn() const {return has_return_;}
     BType getReturnType() const {return return_type_;}
 };
@@ -304,6 +316,7 @@ public:
 class AssignStatementAST : public StatementAST {
     std::string identifier_;
     std::unique_ptr<ExprAST> value_;
+    BType dest_type_;
 public:
     AssignStatementAST(SourceLoc loc, std::string identifier, std::unique_ptr<ExprAST> value)
         : StatementAST(loc), identifier_(identifier), value_(std::move(value)) {};
@@ -311,6 +324,8 @@ public:
     const std::string getIdentifier() const {return identifier_;}
     const ExprAST & getValue() const {return *value_;};
     void valueAccept(ASTVisitor * v){value_->accept(v);}
+    void setDestType(BType type){dest_type_ = type;}
+    BType getDestType(){return dest_type_;}
 };
 
 class InitStatementAST : public StatementAST{
@@ -384,7 +399,7 @@ public:
         }
         func_index_=0;
     }
-    int countFuncs(){return func_ASTs_.size();}
+    int countFuncs() const {return func_ASTs_.size();}
     //std::vector<std::unique_ptr<FunctionAST>>::iterator getFuncASTsIter(){return func_iter.begin();};
 };
 
@@ -406,7 +421,7 @@ public:
         }
         statement_index_=0;
     }
-    int countStatements(){return statement_ASTs_.size();}
+    int countStatements() const {return statement_ASTs_.size();}
 };
 
 // Overall Program
@@ -417,10 +432,8 @@ public:
     BProgram(std::unique_ptr<TopLevels> top_levels, std::unique_ptr<FuncDefs> func_defs) 
         : func_defs_(std::move(func_defs)), top_levels_(std::move(top_levels)) {};
     void accept(ASTVisitor * v) override {v->programAction(this);};
-    // TopLevels & getTopLevels() {return * top_levels_;}
-    // FuncDefs & getFuncDefs() {return * func_defs_;}
-    // std::shared_ptr<TopLevels> getTopLevels(){return std::make_shared<TopLevels>(top_levels_);}
-    // std::shared_ptr<FuncDefs> getFuncDefs(){return std::make_shared<FuncDefs>(func_defs_);}
+    const TopLevels & getTopLevels() const {return *top_levels_;};
+    const FuncDefs & getFuncDefs() const {return *func_defs_;};
     void topLevelsAccept(ASTVisitor * v){top_levels_->accept(v);}
     void funcDefsAccept(ASTVisitor * v){func_defs_->accept(v);}
 };
