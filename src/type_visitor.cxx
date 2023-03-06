@@ -82,7 +82,7 @@ BType TypeVisitor::typeContext(std::string identifier){
     std::vector<BType> identifier_types = identifier_stacks_[identifier];
     if (identifier_types.size() == 0){
         typingMessage("Variable referenced before definition", identifier);
-        // throw?
+        throw BError();
     }
     return identifier_types[identifier_types.size()-1];
 }
@@ -91,7 +91,7 @@ BFType TypeVisitor::funcContext(std::string func_name){
     BFType func_type = func_types_[func_name];
     if (!func_type.isValid()){
         typingMessage("Function not defined", func_name);
-        // throw?
+        throw BError();
     }
     return func_type;
 }
@@ -280,7 +280,7 @@ void TypeVisitor::variableExprAction(VariableExprAST * variable_node) {
     if (!varIsDefined(variable_name)){
         std::string loc_str = variable_node->getLocStr();
         typingMessage("Variable not defined before use", variable_name, loc_str);
-        // throw
+        throw BError();
     }else{
         variable_node->setType(typeContext(variable_name));
     }
@@ -291,7 +291,7 @@ void TypeVisitor::callExprAction(CallExprAST * call_node) {
     if(!funcIsDefined(func_name)){
         std::string loc_str = call_node->getLocStr();
         typingMessage("Function not defined before use", func_name, loc_str);
-        return; //throw BError();
+        throw BError();
     }
     
     BFType func_type = funcContext(func_name);
@@ -314,7 +314,7 @@ void TypeVisitor::callExprAction(CallExprAST * call_node) {
                 + "Actual: " + typeToStr(arg_expr.getType())
                 + arg_expr.getLocStr();
             typingMessage("Arg doesn't match", func_name, arg_type_str);
-            return; // throw?
+            throw BError();
         }
     }
     call_node->setType(func_type.getReturnType());
@@ -412,7 +412,7 @@ void TypeVisitor::ifStAction(IfStatementAST * if_node){
     auto cond_node = if_node->getCond();
     if (!hasType(cond_node)){
         typingMessage("If statement condition expression failed to type","",cond_node.getLocStr());
-        return; // throw
+        throw BError();
     }
     if(cond_node.getType() != type_bool){
         typingMessage("If statement condition not a bool expression","",cond_node.getLocStr());
@@ -515,7 +515,7 @@ void TypeVisitor::returnStAction(ReturnStatementAST * return_node){
     auto expr_node = return_node->getReturnExpr();
     if (!hasType(expr_node)){
         typingMessage("Return expression failed to type","",expr_node.getLocStr());
-        return; // throw
+        throw BError();
     }
     typingMessage("Adding return type to stack from return at ", return_node->getLocStr());
     return_type_stack_.push_back(expr_node.getType());
@@ -605,26 +605,30 @@ void TypeVisitor::assignStAction(AssignStatementAST * assign_node){
     std::string assigned_var = assign_node->getIdentifier();
     if(!varIsDefined(assigned_var)){
         typingMessage("Assigned variable not defined", assigned_var, assign_node->getLocStr());
-        return; // throw
+        throw BError();
     }
     // var is defined
     BType defined_type = typeContext(assigned_var);
+    assign_node->setDestType(defined_type);
 
     // 2. expr types 
-    // std::shared_ptr<ExprAST> value_expr = assign_node->getValue();
-    // value_expr->accept(this);
     assign_node->valueAccept(this);
     auto value_expr = assign_node->getValue();
     if(!hasType(value_expr)){
         typingMessage("Assignment value not well typed", value_expr.getLocStr());
-        return; // throw
+        throw BError();
     }
     BType val_expr_type = value_expr.getType();
 
     // 3. expr type matches uppermost var definition;
     if (val_expr_type != defined_type){
         typingMessage("Variable and expression type do not match", typeToStr(defined_type)+typeToStr(val_expr_type), assign_node->getLocStr());
-        return; // throw
+        if(isCastable(val_expr_type,defined_type)){
+            typingMessage("Allowing cast from, to",typeToStr(val_expr_type),typeToStr(defined_type));
+        }
+        else{
+            throw BError();
+        }
     }
     return_type_stack_.push_back(type_void);
 }
@@ -635,7 +639,7 @@ void TypeVisitor::initStAction(InitStatementAST * init_node){
     std::string init_id_str = init_node->getIdentifier();
     if (isInCurrentScope(init_id_str)){
         typingMessage("Identifier previously defined in this scope", init_node->getIdentifier());
-        return; //throw
+        throw BError();
     }
     BType type = init_node->getType();
     // Can safely define for this scope, so add

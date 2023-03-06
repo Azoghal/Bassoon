@@ -128,12 +128,24 @@ void CodeGenerator::pushLlvmProto(llvm::Function * proto){
 //  Casting
 // -----------------------
 
+llvm::Value * CodeGenerator::createCast(llvm::Value * val, BType dest_type){
+    if (dest_type == type_double){
+        return tryIntToDoubleCast(val);
+    }
+    else if(dest_type == type_int){
+        return tryDoubleToIntCast(val);
+    }
+    fprintf(stderr,"not a castable type\n");
+    throw BError();
+}
+
 llvm::Value * CodeGenerator::createIntToDoubleCast(llvm::Value * int_val){
     fprintf(stderr,"Casting int to double\n");
-    return builder_->CreateIntCast(int_val,convertBType(type_double), true, "int_to_double_cast");
+    return builder_->CreateSIToFP(int_val, convertBType(type_double),"int_to_double_cast");
 }
 llvm::Value * CodeGenerator::createDoubleToIntCast(llvm::Value * double_val){
-    return builder_->CreateFPCast(double_val, convertBType(type_int), "double_to_int_cast");
+    fprintf(stderr,"Casting double to int\n");
+    return builder_->CreateFPToSI(double_val, convertBType(type_int), "double_to_int_cast");
 }
 
 llvm::Value * CodeGenerator::tryIntToDoubleCast(llvm::Value * maybe_int_val){
@@ -238,13 +250,17 @@ llvm::Value * CodeGenerator::createLessThan(BType lhs_type, BType rhs_type, llvm
 }
 
 llvm::Value * CodeGenerator::createGreaterThan(BType lhs_type, BType rhs_type, llvm::Value * lhs_val, llvm::Value * rhs_val){
+    fprintf(stderr, "Making >, types: l: %s r: %s", typeToStr(lhs_type).c_str(), typeToStr(rhs_type).c_str());
     if(lhs_type == rhs_type && lhs_type == type_int){
+        fprintf(stderr, "A\n");
         return builder_->CreateICmpSGT(lhs_val, rhs_val, "int_cmp_gt");
     }
     else if(lhs_type == rhs_type && lhs_type == type_double){
+        fprintf(stderr, "B\n");
         return builder_->CreateFCmpOGT(lhs_val,rhs_val,"double_cmp_gt");
     }
     else{
+        fprintf(stderr, "C\n");
         return builder_->CreateFCmpOGT(tryIntToDoubleCast(lhs_val),tryIntToDoubleCast(rhs_val),"double_cmp_gt");
     }
 }
@@ -302,6 +318,7 @@ void CodeGenerator::doubleExprAction(DoubleExprAST * double_node){
 void CodeGenerator::variableExprAction(VariableExprAST * variable_node){
     std::string name = variable_node->getName();
     std::string loc_str = variable_node->getLocStr();
+    fprintf(stderr,"gening variable expre,%s %s\n",name.c_str(), variable_node->getLocStr().c_str());
     llvm::Type * llvm_type = convertBType(variable_node->getType());
     llvm::Value *var_val = named_values_[variable_node->getName()];
     if(!var_val){
@@ -384,6 +401,8 @@ void CodeGenerator::binaryExprAction(BinaryExprAST * binary_node){
     binary_node->rhsAccept(this);
     llvm::Value * rhs_val = popLlvmValue();
 
+    fprintf(stderr,"doing a binop at %s", binary_node->getLocStr().c_str());
+
     // Can replace this with more advanced function with lookup for
     // which types to use if more types or operators added.
     fprintf(stderr,"Checking if casts for binop needed\n");
@@ -396,6 +415,9 @@ void CodeGenerator::binaryExprAction(BinaryExprAST * binary_node){
         fprintf(stderr,"try int to doubbles\n");
         lhs_val = tryIntToDoubleCast(lhs_val);
         rhs_val = tryIntToDoubleCast(rhs_val);
+    }
+    else{
+        fprintf(stderr,"its a bool binary\n");
     }
 
     llvm::Value * binary_val;
@@ -429,6 +451,7 @@ void CodeGenerator::binaryExprAction(BinaryExprAST * binary_node){
         throw BError(); 
     }
     }
+    fprintf(stderr,"Pushing binop\n");
     pushLlvmValue(binary_val);
 }
 
@@ -583,13 +606,18 @@ void CodeGenerator::assignStAction(AssignStatementAST * assign_node){
     // TODO ensure that var is already initialised.
     llvm::AllocaInst * alloca = named_values_[var_name];
 
-    // Seg Fault HERE if an assignment
+    // TYPE CHECK
+    BType dest_type = assign_node->getDestType();
+    if(convertBType(dest_type) != val_to_assign->getType()){
+        val_to_assign = createCast(val_to_assign,dest_type);
+    }
     builder_->CreateStore(val_to_assign, alloca);
 }
 
 void CodeGenerator::initStAction(InitStatementAST * init_node){
     //TODO validate that not overwriting.
     std::string var_name = init_node->getIdentifier();
+    fprintf(stderr,"gening init statement\n");
     llvm::Type * var_type = convertBType(init_node->getType());
     llvm::AllocaInst *alloca = builder_->CreateAlloca(var_type, nullptr, var_name);
     named_values_[var_name] = alloca;
@@ -602,9 +630,11 @@ void CodeGenerator::prototypeAction(PrototypeAST * proto_node){
     BFType b_func_type = proto_node->getType();
     auto b_arg_types = b_func_type.getArgumentTypes();
     for (auto b_arg_type:b_arg_types){
+        fprintf(stderr,"gennig prototype args\n");
         llvm_arg_types.push_back(convertBType(b_arg_type));
     }
 
+    fprintf(stderr,"gennig prototype RET\n");
     auto ret_type = convertBType(b_func_type.getReturnType());
     llvm::FunctionType * func_type = llvm::FunctionType::get(ret_type, llvm_arg_types, false);
 

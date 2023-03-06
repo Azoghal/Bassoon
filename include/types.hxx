@@ -39,6 +39,22 @@ static std::string typeToStr(int t){
     }
 }
 
+static bool isCastable(BType origin, BType destination){
+    switch(origin){
+    case(type_bool):{
+        return false;
+    }
+    case(type_int):{
+        return destination == type_double;
+    }
+    case(type_double):{
+        return destination == type_int;
+    }
+    default:{
+        return false;
+    }
+    }
+}
 
 
 } // end namespace bassoon

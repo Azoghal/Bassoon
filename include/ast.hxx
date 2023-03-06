@@ -316,6 +316,7 @@ public:
 class AssignStatementAST : public StatementAST {
     std::string identifier_;
     std::unique_ptr<ExprAST> value_;
+    BType dest_type_;
 public:
     AssignStatementAST(SourceLoc loc, std::string identifier, std::unique_ptr<ExprAST> value)
         : StatementAST(loc), identifier_(identifier), value_(std::move(value)) {};
@@ -323,6 +324,8 @@ public:
     const std::string getIdentifier() const {return identifier_;}
     const ExprAST & getValue() const {return *value_;};
     void valueAccept(ASTVisitor * v){value_->accept(v);}
+    void setDestType(BType type){dest_type_ = type;}
+    BType getDestType(){return dest_type_;}
 };
 
 class InitStatementAST : public StatementAST{

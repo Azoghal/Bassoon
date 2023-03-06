@@ -51,6 +51,7 @@ class CodeGenerator : public ASTVisitor {
     llvm::Value * createLessThan(BType lhs_type, BType rhs_type, llvm::Value * lhs_val, llvm::Value * rhs_val);
     llvm::Value * createGreaterThan(BType lhs_type, BType rhs_type, llvm::Value * lhs_val, llvm::Value * rhs_val);
 
+    llvm::Value * createCast(llvm::Value * val, BType dest_type);
     llvm::Value * createIntToDoubleCast(llvm::Value * int_val);
     llvm::Value * createDoubleToIntCast(llvm::Value * double_val);
     llvm::Value * tryIntToDoubleCast(llvm::Value * maybe_int_val);
