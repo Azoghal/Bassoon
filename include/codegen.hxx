@@ -6,6 +6,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Instruction.h"
@@ -62,7 +63,7 @@ public:
     void setTarget();
     void definePutChar();
     void printIR();
-    void compile();
+    void compile(bool optimize = true);
     void generate(std::shared_ptr<BProgram> program);
 
     void boolExprAction(BoolExprAST * bool_node) override;

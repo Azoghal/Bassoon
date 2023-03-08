@@ -55,6 +55,43 @@ void CodeGenerator::setTarget(){
     module_->setTargetTriple(target_triple);
 }
 
+void CodeGenerator::definePutChar(){
+    std::vector<llvm::Type *> arg_types;
+    arg_types.push_back(llvm::Type::getInt32Ty(*context_));
+    llvm::FunctionType * func_type = llvm::FunctionType::get(llvm::Type::getInt32Ty(*context_), arg_types, false); 
+    llvm::Function * func = llvm::Function::Create(func_type, llvm::Function::ExternalLinkage, "putchar", module_.get());
+}
+
+void CodeGenerator::printIR(){
+    module_->print(llvm::errs(), nullptr);
+}
+
+void CodeGenerator::compile(bool optimize=true){
+    std::string object_filename = "output.o";
+    std::error_code EC;
+    llvm::raw_fd_ostream destination (object_filename, EC, llvm::sys::fs::OF_None);
+    if(EC){
+        llvm::errs() << "Can't open file " << EC.message();
+        return;
+    }
+
+    if(optimize){
+        
+    }
+
+    llvm::legacy::PassManager code_gen_pass_manager;
+    auto file_type = llvm::CGFT_ObjectFile; // code gen file type
+
+    if(target_machine_->addPassesToEmitFile(code_gen_pass_manager, destination, nullptr, file_type)){
+        llvm::errs() << "target machine can't emit a file of this type";
+        return;
+    }
+
+    code_gen_pass_manager.run(*module_);
+    destination.flush();
+}
+
+
 // ----------------------
 // Helpers
 // ----------------------
@@ -277,37 +314,6 @@ llvm::Value * CodeGenerator::createGreaterThan(BType lhs_type, BType rhs_type, l
         fprintf(stderr, "C\n");
         return builder_->CreateFCmpOGT(tryIntToDoubleCast(lhs_val),tryIntToDoubleCast(rhs_val),"double_cmp_gt");
     }
-}
-
-void CodeGenerator::definePutChar(){
-    std::vector<llvm::Type *> arg_types;
-    arg_types.push_back(llvm::Type::getInt32Ty(*context_));
-    llvm::FunctionType * func_type = llvm::FunctionType::get(llvm::Type::getInt32Ty(*context_), arg_types, false); 
-    llvm::Function * func = llvm::Function::Create(func_type, llvm::Function::ExternalLinkage, "putchar", module_.get());
-}
-
-void CodeGenerator::printIR(){
-    module_->print(llvm::errs(), nullptr);
-}
-
-void CodeGenerator::compile(){
-    std::string object_filename = "output.o";
-    std::error_code EC;
-    llvm::raw_fd_ostream destination (object_filename, EC, llvm::sys::fs::OF_None);
-    if(EC){
-        llvm::errs() << "Can't open file " << EC.message();
-        return;
-    }
-    llvm::legacy::PassManager pass_manager;
-    auto file_type = llvm::CGFT_ObjectFile; // code gen file type
-
-    if(target_machine_->addPassesToEmitFile(pass_manager, destination, nullptr, file_type)){
-        llvm::errs() << "target machine can't emit a file of this type";
-        return;
-    }
-
-    pass_manager.run(*module_);
-    destination.flush();
 }
 
 //--------------------
