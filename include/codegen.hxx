@@ -7,6 +7,9 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Analysis/LoopAnalysisManager.h"
+#include "llvm/Analysis/CGSCCPassManager.h"
+#include "llvm/Passes/PassBuilder.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Instruction.h"
@@ -60,11 +63,13 @@ class CodeGenerator : public ASTVisitor {
     llvm::Value * tryDoubleToIntCast(llvm::Value * maybe_double_val);
 public:
     CodeGenerator();
-    void setTarget();
-    void definePutChar();
     void printIR();
-    void compile(bool optimize = true);
+
+    void definePutChar();
     void generate(std::shared_ptr<BProgram> program);
+    void optimize();
+    void setTarget();
+    void compile();
 
     void boolExprAction(BoolExprAST * bool_node) override;
     void intExprAction(IntExprAST * int_node) override;

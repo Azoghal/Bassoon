@@ -27,8 +27,10 @@ int main(int argc, char *argv[]){
     bassoon::codegen::CodeGenerator code_generator;
     code_generator.definePutChar();
     code_generator.generate(program);
-    code_generator.printIR();
+    //code_generator.printIR();
+    code_generator.optimize();
     code_generator.setTarget();
     code_generator.compile();
+
     return 0;
 }

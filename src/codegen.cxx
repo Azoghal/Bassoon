@@ -19,8 +19,49 @@ CodeGenerator::CodeGenerator(){
     builder_ = std::make_unique<llvm::IRBuilder<>>(*context_);
 }
 
+void CodeGenerator::printIR(){
+    module_->print(llvm::errs(), nullptr);
+}
+
+void CodeGenerator::definePutChar(){
+    std::vector<llvm::Type *> arg_types;
+    arg_types.push_back(llvm::Type::getInt32Ty(*context_));
+    llvm::FunctionType * func_type = llvm::FunctionType::get(llvm::Type::getInt32Ty(*context_), arg_types, false); 
+    llvm::Function * func = llvm::Function::Create(func_type, llvm::Function::ExternalLinkage, "putchar", module_.get());
+}
+
 void CodeGenerator::generate(std::shared_ptr<BProgram> program){
     program->accept(this);
+}
+
+void CodeGenerator::optimize(){
+    // Create the analysis managers
+    llvm::LoopAnalysisManager loop_analysis;
+    llvm::FunctionAnalysisManager function_analysis;
+    llvm::CGSCCAnalysisManager CGSCC_analysis;
+    llvm::ModuleAnalysisManager module_analysis;
+
+    // Create a new pass manager builder
+    llvm::PassBuilder pass_builder;
+
+    // Register the analyses with the managers
+    pass_builder.registerModuleAnalyses(module_analysis);
+    pass_builder.registerCGSCCAnalyses(CGSCC_analysis);
+    pass_builder.registerFunctionAnalyses(function_analysis);
+    pass_builder.registerLoopAnalyses(loop_analysis);
+    pass_builder.crossRegisterProxies(loop_analysis, function_analysis, CGSCC_analysis, module_analysis);
+
+    // Create a pass manager
+    // Corresponds to typical -O2 optimization pipeline in clang.
+    llvm::ModulePassManager optimisation_pass_manager = pass_builder.buildPerModuleDefaultPipeline(llvm::OptimizationLevel::O2);
+    
+    // Do the optimisations
+    fprintf(stderr,"BEFORE OPTIMIZATION ---------------------------\n");
+    this->printIR();
+    optimisation_pass_manager.run(*module_, module_analysis); 
+    fprintf(stderr,"AFTER OPTIMIZATION ----------------------------\n");
+    this->printIR();
+
 }
 
 void CodeGenerator::setTarget(){
@@ -55,28 +96,13 @@ void CodeGenerator::setTarget(){
     module_->setTargetTriple(target_triple);
 }
 
-void CodeGenerator::definePutChar(){
-    std::vector<llvm::Type *> arg_types;
-    arg_types.push_back(llvm::Type::getInt32Ty(*context_));
-    llvm::FunctionType * func_type = llvm::FunctionType::get(llvm::Type::getInt32Ty(*context_), arg_types, false); 
-    llvm::Function * func = llvm::Function::Create(func_type, llvm::Function::ExternalLinkage, "putchar", module_.get());
-}
-
-void CodeGenerator::printIR(){
-    module_->print(llvm::errs(), nullptr);
-}
-
-void CodeGenerator::compile(bool optimize=true){
+void CodeGenerator::compile(){
     std::string object_filename = "output.o";
     std::error_code EC;
     llvm::raw_fd_ostream destination (object_filename, EC, llvm::sys::fs::OF_None);
     if(EC){
         llvm::errs() << "Can't open file " << EC.message();
         return;
-    }
-
-    if(optimize){
-        
     }
 
     llvm::legacy::PassManager code_gen_pass_manager;
