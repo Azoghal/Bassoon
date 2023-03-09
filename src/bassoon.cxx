@@ -6,8 +6,11 @@
 #include "codegen.hxx"
 #include <iostream>
 
+#include "spdlog/spdlog.h"
+
 int main(int argc, char *argv[]){
-    bassoon::Parser::setVerbosity(1);
+    spdlog::set_level(spdlog::level::debug);
+    spdlog::info("Starting Bassoon");
 
     std::shared_ptr<bassoon::BProgram> program = bassoon::Parser::parseLoop();
 
