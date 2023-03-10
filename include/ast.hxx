@@ -71,7 +71,7 @@ public:
     int getLine() const {return loc_.line;};
     int getCol() const {return loc_.collumn;};
     std::string getLocStr() const{
-        std::string formatted_loc = "{" + std::to_string(loc_.line) + ":" + std::to_string(loc_.collumn) + "}";
+        std::string formatted_loc = "{ Line:" + std::to_string(loc_.line) + " , Col: " + std::to_string(loc_.collumn) + "}";
         return formatted_loc;
     }
 };
