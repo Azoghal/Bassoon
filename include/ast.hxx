@@ -95,7 +95,7 @@ public:
             type_ = known_type;
         } else{
             if(type_!=known_type){
-                fprintf(stderr,"Tried to overwrite known type %s with %s at %s\n",typeToStr(type_).c_str(), typeToStr(known_type).c_str(), getLocStr().c_str());
+                spdlog::warn("Tried to overwrite known type {0} with {1} at {2}",typeToStr(type_), typeToStr(known_type), getLocStr());
             }
         }
     }
@@ -229,7 +229,7 @@ public:
     const StatementAST & getElse() const {return  *else_;}
     void condAccept(ASTVisitor * v){cond_->accept(v);}
     void thenAccept(ASTVisitor * v){then_->accept(v);}
-    void elseAccept(ASTVisitor * v){if(!has_else_){fprintf(stderr,"don't have an else clause\n");};else_->accept(v);}
+    void elseAccept(ASTVisitor * v){if(!has_else_){spdlog::debug("No else clause at {0}", getLocStr());};else_->accept(v);}
     bool getHasElse(){return has_else_;}
 };
 
@@ -419,7 +419,7 @@ public:
     bool anotherStatement(){return statement_index_<statement_ASTs_.size();}
     void statementsAllAccept(ASTVisitor * v) {
         while(anotherStatement()){
-            fprintf(stderr,"statement %d\n", statement_index_);
+            spdlog::debug("statement {0:d}", statement_index_);
             statement_ASTs_[statement_index_]->accept(v);
             statement_index_++;
         }
