@@ -81,7 +81,7 @@ void VizVisitor::addNodeChild(std::string parent_name, std::string child_name){
 
 void VizVisitor::pushName(std::string s){
     name_stack_.push_back(s);
-    if(spdlog::get_level() == spdlog::level::debug){
+    if(spdlog::get_level() <= spdlog::level::debug){
         spdlog::debug("-----pushed---");
         for (std::string s : name_stack_){
             spdlog::debug("{0}",s);
@@ -92,7 +92,7 @@ void VizVisitor::pushName(std::string s){
 std::string VizVisitor::popName(){
     std::string to_pop = name_stack_.at(name_stack_.size()-1);
     name_stack_.pop_back();
-    if(spdlog::get_level() == spdlog::level::debug){
+    if(spdlog::get_level() <= spdlog::level::debug){
         spdlog::debug("-----popped----");
         for (std::string s : name_stack_){
             spdlog::debug("{0}",s);

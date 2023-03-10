@@ -4,6 +4,7 @@
 #include "llvm/IR/BasicBlock.h"
 #include "source_loc.hxx"
 #include "types.hxx"
+#include "spdlog/spdlog.h"
 
 namespace bassoon
 {
@@ -396,7 +397,7 @@ public:
     bool anotherFunc(){return func_index_<func_ASTs_.size();}
     void functionsAllAccept(ASTVisitor * v) {
         while(anotherFunc()){
-            fprintf(stderr,"function %s\n", func_ASTs_[func_index_]->getProto().getName().c_str());
+            spdlog::debug("Function {0}", func_ASTs_[func_index_]->getProto().getName());
             func_ASTs_[func_index_]->accept(v);
             func_index_++;
         }

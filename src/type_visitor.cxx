@@ -10,18 +10,6 @@ namespace bassoon
 namespace typecheck
 {
 
-void typingMessage(std::string message){
-    fprintf(stderr, "%s\n", message.c_str());
-}
-
-void typingMessage(std::string message, std::string var_or_func_name){
-    fprintf(stderr, "%s: %s\n", message.c_str(),var_or_func_name.c_str());
-}
-
-void typingMessage(std::string message, std::string var_or_func_name, std::string loc_str){
-    fprintf(stderr, "%s: %s at %s\n", message.c_str(), var_or_func_name.c_str(), loc_str.c_str());
-}
-
 std::string tPhaseToStr(typing_phase tp){
     switch(tp){
     case(tp_lang_var):{
@@ -81,7 +69,7 @@ void TypeVisitor::typecheckTopLevels(std::shared_ptr<TopLevels> top_levels){
 BType TypeVisitor::typeContext(std::string identifier){
     std::vector<BType> identifier_types = identifier_stacks_[identifier];
     if (identifier_types.size() == 0){
-        typingMessage("Variable referenced before definition", identifier);
+        spdlog::error("Variable {0} referenced before definition", identifier);
         throw BError();
     }
     return identifier_types[identifier_types.size()-1];
@@ -90,7 +78,7 @@ BType TypeVisitor::typeContext(std::string identifier){
 BFType TypeVisitor::funcContext(std::string func_name){
     BFType func_type = func_types_[func_name];
     if (!func_type.isValid()){
-        typingMessage("Function not defined", func_name);
+        spdlog::error("Function {0} not defined", func_name);
         throw BError();
     }
     return func_type;
@@ -321,14 +309,14 @@ void TypeVisitor::callExprAction(CallExprAST * call_node) {
             std::string type_str = typeToStr(arg_expr.getType());
             std::string expected_type_str = typeToStr(expected_arg_types[arg_i]);
             if(isCastable(arg_expr_type, expected_type)){
-                spdlog::info("Type of arg {0:d}: {1} in call of function {2} at {3} doesn't match expected type {4}",
+                spdlog::debug("Type of arg {0:d}: {1} in call of function {2} at {3} doesn't match expected type {4}",
                     arg_i, 
                     type_str,
                     func_name,
                     call_node->getLocStr(),
                     expected_type_str
                 );
-                spdlog::info("Allowing cast");
+                spdlog::debug("Allowing cast");
             }
             else{
                 spdlog::error("Type of arg {0:d}: {1} in call of function {2} at {3} doesn't match expected type {4}",
@@ -653,8 +641,8 @@ void TypeVisitor::assignStAction(AssignStatementAST * assign_node){
         std::string def_type_str = typeToStr(defined_type);
         std::string val_type_str = typeToStr(val_expr_type);
         if(isCastable(val_expr_type,defined_type)){
-            spdlog::info("Variable type {0} and expression type {1} do not match at {2}", val_type_str, def_type_str, assign_node->getLocStr());
-            spdlog::info("Allowing cast from {0} to {1}", val_type_str, def_type_str);
+            spdlog::debug("Variable type {0} and expression type {1} do not match at {2}", val_type_str, def_type_str, assign_node->getLocStr());
+            spdlog::debug("Allowing cast from {0} to {1}", val_type_str, def_type_str);
         }
         else{
             spdlog::error("Variable type {0} and expression type {1} do not match at {2}", val_type_str, def_type_str, assign_node->getLocStr());
@@ -669,7 +657,7 @@ void TypeVisitor::initStAction(InitStatementAST * init_node){
     // 1. a not in current scope definitions
     std::string init_id_str = init_node->getIdentifier();
     if (isInCurrentScope(init_id_str)){
-        typingMessage("Identifier previously defined in this scope", init_node->getIdentifier());
+        spdlog::error("Identifier {0} previously defined in this scope", init_node->getIdentifier());
         throw BError();
     }
     BType type = init_node->getType();
@@ -687,11 +675,11 @@ void TypeVisitor::initStAction(InitStatementAST * init_node){
 void TypeVisitor::prototypeAction(PrototypeAST * proto_node){
     switch(typecheck_phase_){
     case(tp_func_proto):{
-        typingMessage("adding prototype to context");
+        spdlog::debug("adding prototype to context");
         // adding the prototypes, so check not already defined.
         std::string f_name = proto_node->getName();
         if(isInFuncContext(f_name)){
-            typingMessage("Function already defined",f_name, proto_node->getLocStr());
+            spdlog::error("Function {0} at {1} already defined",f_name, proto_node->getLocStr());
             throw BError();
         }
         BFType f_type = proto_node->getType();
@@ -699,7 +687,7 @@ void TypeVisitor::prototypeAction(PrototypeAST * proto_node){
         break;
     }
     case(tp_func_check):{
-        typingMessage("adding proto var definitions for body typecheck");
+        spdlog::debug("adding proto var definitions for body typecheck");
         // checking the function body so populate var scopes with arguments
         for (auto [var_id, var_type] : proto_node->getArgs()){
             addVarDefinition(var_id,var_type);
@@ -707,7 +695,7 @@ void TypeVisitor::prototypeAction(PrototypeAST * proto_node){
         break;
     }
     default:{
-        typingMessage("func proto typechecked in unexpected phase: ", tPhaseToStr(typecheck_phase_));
+        spdlog::warn("func proto typechecked in unexpected phase: ", tPhaseToStr(typecheck_phase_));
     }
     }
 }
@@ -716,12 +704,12 @@ void TypeVisitor::functionAction(FunctionAST * func_node){
     switch(typecheck_phase_){
     case(tp_func_proto):{
         // populate func and var context with proto accept
-        typingMessage("Accepting a function in proto phase");
+        spdlog::debug("Accepting a function in proto phase");
         func_node->protoAccept(this);
         break;
     }
     case(tp_func_check):{
-        typingMessage("Accepting function in func typecheck phase");
+        spdlog::debug("Accepting function in func typecheck phase");
         int original_ret_size = return_type_stack_.size();
         BType return_type = func_node->getType().getReturnType();
         // Push new scope for argument definitions
@@ -738,13 +726,15 @@ void TypeVisitor::functionAction(FunctionAST * func_node){
         BType body_return_type = popReturnType();
         checkRetStackSize(original_ret_size);
         if(body_return_type != return_type){
-            typingMessage("Function body does not have same return type as prototype", func_node->getProto().getName(), func_node->getLocStr());
+            std::string body_str = typeToStr(body_return_type);
+            std::string expected_str = typeToStr(return_type);
+            spdlog::error("Function {0}'s body has return type {1} that does not match {2} in prototype at {3}", func_node->getProto().getName(), body_str, expected_str, func_node->getLocStr());
             throw BError();
         }
         break;
     }
     default:{
-        typingMessage("func typechecked in unexpected phase: ", tPhaseToStr(typecheck_phase_));
+        spdlog::error("func typechecked in unexpected phase {0}", tPhaseToStr(typecheck_phase_));
     }
     }
 }
@@ -752,17 +742,17 @@ void TypeVisitor::functionAction(FunctionAST * func_node){
 void TypeVisitor::topLevelsAction(TopLevels * top_levels_node){
     switch(typecheck_phase_){
     case tp_user_glob:{
-        typingMessage("Add top level globals to context phase, not yet in language");
+        spdlog::warn("Add top level globals to context phase, not yet in language");
         break;
     }
     case tp_top_lvl_check:{
         // typecheck the top level statements
-        typingMessage("accepting all top level statements in top level typecheck phase");
+        spdlog::debug("accepting all top level statements in top level typecheck phase");
         top_levels_node->statementsAllAccept(this);
         break;
     }
     default:{
-        typingMessage("Unexpected call to topLevelsAction in typecheck phase", tPhaseToStr(typecheck_phase_));
+        spdlog::warn("Unexpected call to topLevelsAction in typecheck phase {0}", tPhaseToStr(typecheck_phase_));
     }
     } 
 }
@@ -771,18 +761,18 @@ void TypeVisitor::funcDefsAction(FuncDefs * func_defs_node){
     switch(typecheck_phase_){
     case tp_func_proto:{
         // Find protos and add them to context
-        typingMessage("accepting all functions in proto phase");
+        spdlog::debug("accepting all functions in proto phase");
         func_defs_node->functionsAllAccept(this);
         break;
     }
     case tp_func_check:{
         // typecheck the bodies against the protos
-        typingMessage("accepting all functions in function check phase");
+        spdlog::debug("accepting all functions in function check phase");
         func_defs_node->functionsAllAccept(this);
         break;
     }
     default:{
-        typingMessage("Unexpected call to funcDefsAction in typecheck phase", tPhaseToStr(typecheck_phase_));
+        spdlog::warn("Unexpected call to funcDefsAction in typecheck phase", tPhaseToStr(typecheck_phase_));
     }
     }
 }
@@ -795,37 +785,37 @@ void TypeVisitor::programAction(BProgram * program_node){
     // 5 - typecheck all the function definitions
     // 6 - typecheck all the top level statements (even if some functions didn't typecheck)
     
-    typingMessage("TYPECHECKING");
+    spdlog::info("TYPECHECKING");
 
     // Phase 1 - language variable context
     typecheck_phase_ = tp_lang_var;
-    typingMessage("Phase 1",tPhaseToStr(typecheck_phase_));
+    spdlog::info("Phase 1 {0}",tPhaseToStr(typecheck_phase_));
     // go over all the language variables
 
     // Phase 2 - language function context
     typecheck_phase_ = tp_lang_fun;
-    typingMessage("Phase 2",tPhaseToStr(typecheck_phase_));
+    spdlog::info("Phase 2 {0}",tPhaseToStr(typecheck_phase_));
     // go over all the language inbuilt functions
 
     // Phase 3 - function prototypes
     typecheck_phase_ = tp_func_proto;
-    typingMessage("Phase 3",tPhaseToStr(typecheck_phase_));
+    spdlog::info("Phase 3 {0}",tPhaseToStr(typecheck_phase_));
     program_node->funcDefsAccept(this);
 
     // Phase 4 - user globals (currently not in language)
     typecheck_phase_ = tp_user_glob;
-    typingMessage("Phase 4",tPhaseToStr(typecheck_phase_));
+    spdlog::info("Phase 4 {0}",tPhaseToStr(typecheck_phase_));
     program_node->topLevelsAccept(this);
     
 
     // Phase 5 - function typecheck
     typecheck_phase_ = tp_func_check;
-    typingMessage("Phase 5",tPhaseToStr(typecheck_phase_));
+    spdlog::info("Phase 5 {0}",tPhaseToStr(typecheck_phase_));
     program_node->funcDefsAccept(this);
 
     // Phase 6 - top level statement typecheck
     typecheck_phase_ = tp_top_lvl_check;
-    typingMessage("Phase 6",tPhaseToStr(typecheck_phase_));
+    spdlog::info("Phase 6 {0}",tPhaseToStr(typecheck_phase_));
     program_node->topLevelsAccept(this);
 }
 
