@@ -24,6 +24,7 @@
 #include "llvm/Support/FileSystem.h"
 
 #include "llvm/Support/Casting.h"
+#include "spdlog/spdlog.h"
 
 
 namespace bassoon{

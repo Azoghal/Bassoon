@@ -5,6 +5,7 @@
 #include <map>
 
 #include "ast.hxx"
+#include "spdlog/spdlog.h"
 
 namespace bassoon{
 namespace typecheck{

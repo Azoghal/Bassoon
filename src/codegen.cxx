@@ -56,10 +56,10 @@ void CodeGenerator::optimize(){
     llvm::ModulePassManager optimisation_pass_manager = pass_builder.buildPerModuleDefaultPipeline(llvm::OptimizationLevel::O2);
     
     // Do the optimisations
-    fprintf(stderr,"BEFORE OPTIMIZATION ---------------------------\n");
+    spdlog::info("BEFORE OPTIMIZATION ---------------------------");
     this->printIR();
     optimisation_pass_manager.run(*module_, module_analysis); 
-    fprintf(stderr,"AFTER OPTIMIZATION ----------------------------\n");
+    spdlog::info("AFTER OPTIMIZATION ----------------------------");
     this->printIR();
 
 }
@@ -67,7 +67,7 @@ void CodeGenerator::optimize(){
 void CodeGenerator::setTarget(){
     std::string target_triple = llvm::sys::getDefaultTargetTriple();
     if(target_triple != "x86_64-unknown-linux-gnu"){
-        fprintf(stderr,"Initialising all targets\n");
+        spdlog::info("Initialising all targets");
         llvm::InitializeAllTargetInfos();
         llvm::InitializeAllTargets();
         llvm::InitializeAllTargetMCs();
@@ -83,8 +83,8 @@ void CodeGenerator::setTarget(){
     auto target = llvm::TargetRegistry::lookupTarget(target_triple, target_lookup_error);
     if(!target){
         llvm::errs()<<target_lookup_error;
-        fprintf(stderr,"%s\n", target_lookup_error.c_str());
-        return;
+        spdlog::error("{0}", target_lookup_error);
+        throw BError();
     }
     
     std::string cpu = "generic";
@@ -102,7 +102,8 @@ void CodeGenerator::compile(){
     llvm::raw_fd_ostream destination (object_filename, EC, llvm::sys::fs::OF_None);
     if(EC){
         llvm::errs() << "Can't open file " << EC.message();
-        return;
+        spdlog::error("Can't open file {0}", EC.message());
+        throw BError();
     }
 
     llvm::legacy::PassManager code_gen_pass_manager;
@@ -144,7 +145,7 @@ llvm::Type * CodeGenerator::convertBType(BType btype){
         return llvm::Type::getDoubleTy(*context_);
     }
     default:{
-        fprintf(stderr,"not a convertible type %s", typeToStr(btype).c_str());
+        spdlog::error("{0} is not a convertible type", typeToStr(btype));
         throw BError();
     }
     }
@@ -160,24 +161,24 @@ BType CodeGenerator::convertLlvmType(llvm::Type * type){
     }else if(type==convertBType(type_double)){
         return type_double;
     }
-    fprintf(stderr,"Unknown llvm type to convert to BType\n");
+    spdlog::error("Unknown llvm type to convert to BType");
     throw BError();
 }
 
 llvm::Value * CodeGenerator::popLlvmValue(){
     if (!(llvm_value_stack_.size()>0)){
-        fprintf(stderr, "llvm_value_stack is empty but a pop was attempted\n");
+        spdlog::error("llvm_value_stack is empty but a pop was attempted");
         throw BError();
     }
     llvm::Value * val = llvm_value_stack_[llvm_value_stack_.size()-1];
     llvm_value_stack_.pop_back();
-    fprintf(stderr,"POPPED, size: %lu\n",llvm_value_stack_.size());
+    spdlog::debug("POPPED, size: {0:d}",llvm_value_stack_.size());
     return val;
 }
 
 void CodeGenerator::pushLlvmValue(llvm::Value * val){
     if(!val){
-        fprintf(stderr,"Value to be pushed is null\n");
+        spdlog::error("Value to be pushed is null");
         throw BError();
     }
     llvm_value_stack_.push_back(val);
@@ -185,7 +186,7 @@ void CodeGenerator::pushLlvmValue(llvm::Value * val){
 
 llvm::Function * CodeGenerator::popLlvmProto(){
     if (!(llvm_proto_stack_.size()>0)){
-        fprintf(stderr, "llvm_proto_stack is empty but a pop was attempted\n");
+        spdlog::error("llvm_proto_stack is empty but a pop was attempted");
         throw BError();
     }
     llvm::Function * f = llvm_proto_stack_[llvm_proto_stack_.size()-1];
@@ -195,7 +196,7 @@ llvm::Function * CodeGenerator::popLlvmProto(){
 
 void CodeGenerator::pushLlvmProto(llvm::Function * proto){
     if(!proto){
-        fprintf(stderr,"Proto to be pushed is null\n");
+        spdlog::error("Proto to be pushed is null");
         throw BError();
     }
     llvm_proto_stack_.push_back(proto);
@@ -212,41 +213,41 @@ llvm::Value * CodeGenerator::createCast(llvm::Value * val, BType dest_type){
     else if(dest_type == type_int){
         return tryDoubleToIntCast(val);
     }
-    fprintf(stderr,"not a castable type\n");
+    spdlog::error("not a castable type");
     throw BError();
 }
 
 llvm::Value * CodeGenerator::createIntToDoubleCast(llvm::Value * int_val){
-    fprintf(stderr,"Casting int to double\n");
+    spdlog::debug("Casting int to double");
     return builder_->CreateSIToFP(int_val, convertBType(type_double),"int_to_double_cast");
 }
 llvm::Value * CodeGenerator::createDoubleToIntCast(llvm::Value * double_val){
-    fprintf(stderr,"Casting double to int\n");
+    spdlog::debug("Casting double to int");
     return builder_->CreateFPToSI(double_val, convertBType(type_int), "double_to_int_cast");
 }
 
 llvm::Value * CodeGenerator::tryIntToDoubleCast(llvm::Value * maybe_int_val){
     if(maybe_int_val->getType()->isIntegerTy()){
-        fprintf(stderr,"int cast required\n");
+        spdlog::debug("int cast required");
         return this->createIntToDoubleCast(maybe_int_val);
     }
     else if(maybe_int_val->getType()->isFloatingPointTy()){
-        fprintf(stderr,"No int cast required\n");
+        spdlog::debug("No int cast required");
         return maybe_int_val;
     }
-    fprintf(stderr,"Strange type given to tryIntToDoubleCast %i %i\n", maybe_int_val->getType()->isFloatingPointTy(), maybe_int_val->getType()->isIntegerTy());
+    spdlog::error("Unexpected type given to tryIntToDoubleCast. Float? {0} Int? {1}", maybe_int_val->getType()->isFloatingPointTy(), maybe_int_val->getType()->isIntegerTy());
     throw BError();
 }
 llvm::Value * CodeGenerator::tryDoubleToIntCast(llvm::Value * maybe_double_val){
     if(maybe_double_val->getType()->isFloatingPointTy()){
-        fprintf(stderr,"double cast required\n");
+        spdlog::debug("double cast required");
         return this->createDoubleToIntCast(maybe_double_val);
     }
     else if(maybe_double_val->getType()->isIntegerTy()){
-        fprintf(stderr,"No double cast required\n");
+        spdlog::debug("No double cast required");
         return maybe_double_val;
     }
-    fprintf(stderr,"Strange type given to tryDoubleToIntCast\n");
+    spdlog::error("Unexpected type given to tryDoubleToIntCast");
     throw BError();
 }
 
@@ -263,7 +264,7 @@ llvm::Value * CodeGenerator::createAdd(BType res_type, llvm::Value * lhs_val, ll
         return builder_->CreateFAdd(lhs_val,rhs_val,"double_bin_add_temp");
     }
     default:{
-        fprintf(stderr, "Type is not a valid result of sum operation\n");
+        spdlog::error("Type is not a valid result of sum operation");
         throw BError();
     }
     }
@@ -278,7 +279,7 @@ llvm::Value * CodeGenerator::createSub(BType res_type, llvm::Value * lhs_val, ll
         return builder_->CreateFSub(lhs_val,rhs_val,"double_bin_sub_temp");
     }
     default:{
-        fprintf(stderr, "Type is not a valid result of sub operation\n");
+        spdlog::error("Type is not a valid result of sub operation");
         throw BError();
     }
     }
@@ -293,7 +294,7 @@ llvm::Value * CodeGenerator::createMul(BType res_type, llvm::Value * lhs_val, ll
         return builder_->CreateFMul(lhs_val,rhs_val,"double_bin_mul_temp");
     }
     default:{
-        fprintf(stderr, "Type is not a valid result of mul operation\n");
+        spdlog::error("Type is not a valid result of mul operation");
         throw BError();
     }
     }
@@ -308,7 +309,7 @@ llvm::Value * CodeGenerator::createDiv(BType res_type, llvm::Value * lhs_val, ll
         return builder_->CreateFDiv(lhs_val,rhs_val,"double_bin_div_temp");
     }
     default:{
-        fprintf(stderr, "Type %s is not a valid result of div operation\n", typeToStr(res_type).c_str());
+        spdlog::error("Type {0} is not a valid result of div operation", typeToStr(res_type));
         throw BError();
     }
     }
@@ -327,17 +328,14 @@ llvm::Value * CodeGenerator::createLessThan(BType lhs_type, BType rhs_type, llvm
 }
 
 llvm::Value * CodeGenerator::createGreaterThan(BType lhs_type, BType rhs_type, llvm::Value * lhs_val, llvm::Value * rhs_val){
-    fprintf(stderr, "Making >, types: l: %s r: %s", typeToStr(lhs_type).c_str(), typeToStr(rhs_type).c_str());
+    spdlog::debug("Making >, types: l: {0} r: {1}", typeToStr(lhs_type), typeToStr(rhs_type));
     if(lhs_type == rhs_type && lhs_type == type_int){
-        fprintf(stderr, "A\n");
         return builder_->CreateICmpSGT(lhs_val, rhs_val, "int_cmp_gt");
     }
     else if(lhs_type == rhs_type && lhs_type == type_double){
-        fprintf(stderr, "B\n");
         return builder_->CreateFCmpOGT(lhs_val,rhs_val,"double_cmp_gt");
     }
     else{
-        fprintf(stderr, "C\n");
         return builder_->CreateFCmpOGT(tryIntToDoubleCast(lhs_val),tryIntToDoubleCast(rhs_val),"double_cmp_gt");
     }
 }
@@ -364,22 +362,22 @@ void CodeGenerator::doubleExprAction(DoubleExprAST * double_node){
 void CodeGenerator::variableExprAction(VariableExprAST * variable_node){
     std::string name = variable_node->getName();
     std::string loc_str = variable_node->getLocStr();
-    fprintf(stderr,"gening variable expre,%s %s\n",name.c_str(), variable_node->getLocStr().c_str());
+    spdlog::debug("gening variable {0} expression at {1}",name, variable_node->getLocStr());
     llvm::Type * llvm_type = convertBType(variable_node->getType());
     llvm::Value *var_val = named_values_[variable_node->getName()];
     if(!var_val){
-        fprintf(stderr,"Variable name unknown %s at %s",name.c_str(), loc_str.c_str());
+        spdlog::error("Variable name unknown {0} at {1}",name, loc_str);
         throw BError();
     }
     // Seg Fault HERE when for loop step uses variable
-    llvm::Value * load_val = builder_->CreateLoad(llvm_type, var_val, name.c_str());
+    llvm::Value * load_val = builder_->CreateLoad(llvm_type, var_val, name);
     pushLlvmValue(load_val);
 }
 
 void CodeGenerator::callExprAction(CallExprAST * call_node){
     llvm::Function * callee_func = module_->getFunction(call_node->getName());
     if(!callee_func){
-        fprintf(stderr,"Unknown function called\n");
+        spdlog::error("Unknown function called");
         throw BError();
     }
 
@@ -393,9 +391,9 @@ void CodeGenerator::callExprAction(CallExprAST * call_node){
         BType arg_type = convertLlvmType(arg_val->getType());
         BType expected_type = callee_arg_types[i];
         if(arg_type != expected_type){
-            fprintf(stderr,"arg type not a match %s expected: %s", typeToStr(arg_type).c_str(), typeToStr(expected_type).c_str());
+            spdlog::debug("arg type not a match {0} expected: {1}", typeToStr(arg_type), typeToStr(expected_type));
             if(isCastable(arg_type,expected_type)){
-                fprintf(stderr,"creating cast\n");
+                spdlog::debug("creating cast");
                 arg_val = createCast(arg_val,expected_type);
             }
             else{
@@ -406,7 +404,7 @@ void CodeGenerator::callExprAction(CallExprAST * call_node){
     }
 
     if(callee_func->arg_size() != args_vec.size()){
-        fprintf(stderr,"mismatch arg size\n");
+        spdlog::error("mismatch arg size");
         throw BError();
     }
 
@@ -442,7 +440,7 @@ void CodeGenerator::unaryExprAction(UnaryExprAST * unary_node){
         break;
     }
     default:{
-        fprintf(stderr,"Unknown unary operator %c\n",op_code);
+        spdlog::error("Unknown unary operator {0}",op_code);
         throw BError(); 
     }
     }
@@ -460,23 +458,23 @@ void CodeGenerator::binaryExprAction(BinaryExprAST * binary_node){
     binary_node->rhsAccept(this);
     llvm::Value * rhs_val = popLlvmValue();
 
-    fprintf(stderr,"doing a binop at %s", binary_node->getLocStr().c_str());
+    spdlog::debug("doing a binop at {0}", binary_node->getLocStr());
 
     // Can replace this with more advanced function with lookup for
     // which types to use if more types or operators added.
-    fprintf(stderr,"Checking if casts for binop needed\n");
+    spdlog::debug("Checking if casts for binop needed");
     if(res_type == type_int){
-        fprintf(stderr,"try doubles to ints\n");
+        spdlog::debug("try doubles to ints");
         lhs_val = tryDoubleToIntCast(lhs_val);
         rhs_val = tryDoubleToIntCast(rhs_val);
     }
     else if(res_type == type_double){
-        fprintf(stderr,"try int to doubbles\n");
+        spdlog::debug("try int to doubbles");
         lhs_val = tryIntToDoubleCast(lhs_val);
         rhs_val = tryIntToDoubleCast(rhs_val);
     }
     else{
-        fprintf(stderr,"its a bool binary\n");
+        spdlog::debug("Bool binary");
     }
 
     llvm::Value * binary_val;
@@ -506,11 +504,11 @@ void CodeGenerator::binaryExprAction(BinaryExprAST * binary_node){
         break;
     }
     default:{
-        fprintf(stderr,"Unknown binary operator %c\n",op_code);
+        spdlog::error("Unknown binary operator {0}",op_code);
         throw BError(); 
     }
     }
-    fprintf(stderr,"Pushing binop\n");
+    spdlog::debug("Pushing binop");
     pushLlvmValue(binary_val);
 }
 
@@ -644,7 +642,7 @@ void CodeGenerator::blockStAction(BlockStatementAST * block_node){
     }
 
     if(llvm_val_stack_size != llvm_value_stack_.size()){
-        fprintf(stderr,"Value stack size not maintained in block\n");
+        spdlog::error("Value stack size not maintained in block");
         throw BError();
     }
 }
@@ -676,7 +674,7 @@ void CodeGenerator::assignStAction(AssignStatementAST * assign_node){
 void CodeGenerator::initStAction(InitStatementAST * init_node){
     //TODO validate that not overwriting.
     std::string var_name = init_node->getIdentifier();
-    fprintf(stderr,"gening init statement\n");
+    spdlog::debug("generating init statement");
     llvm::Type * var_type = convertBType(init_node->getType());
     llvm::AllocaInst *alloca = builder_->CreateAlloca(var_type, nullptr, var_name);
     named_values_[var_name] = alloca;
@@ -689,11 +687,11 @@ void CodeGenerator::prototypeAction(PrototypeAST * proto_node){
     BFType b_func_type = proto_node->getType();
     auto b_arg_types = b_func_type.getArgumentTypes();
     for (auto b_arg_type:b_arg_types){
-        fprintf(stderr,"gennig prototype args\n");
+        spdlog::debug("generating prototype args");
         llvm_arg_types.push_back(convertBType(b_arg_type));
     }
 
-    fprintf(stderr,"gennig prototype RET\n");
+    spdlog::debug("generating prototype RET");
     auto ret_type = convertBType(b_func_type.getReturnType());
     llvm::FunctionType * func_type = llvm::FunctionType::get(ret_type, llvm_arg_types, false);
 
@@ -712,7 +710,7 @@ void CodeGenerator::functionAction(FunctionAST * func_node){
     llvm::Function * function = module_->getFunction(func_node->getProto().getName());
 
     if(!function){
-        fprintf(stderr,"Function not previously declared, accepting proto\n");
+        spdlog::debug("Function not previously declared, accepting proto");
         func_node->protoAccept(this);
         function = popLlvmProto();
     }
@@ -720,7 +718,7 @@ void CodeGenerator::functionAction(FunctionAST * func_node){
     // TODO VERIFY THAT FUNCTION MATCHES func_node's signature.
 
     if(!function->empty()){
-        fprintf(stderr,"Expected function to be empty at definition\n");
+        spdlog::debug("Expected function to be empty at definition");
         throw BError();
     }
 
@@ -756,7 +754,7 @@ void CodeGenerator::functionAction(FunctionAST * func_node){
     if(llvm::verifyFunction(*function)){
         // true indicates errors encountered.
         this->printIR();
-        fprintf(stderr,"function body not verified %s.\n", func_node->getProto().getName().c_str());
+        spdlog::error("function {0}: body not verified", func_node->getProto().getName());
         throw BError();
     }
     
@@ -778,7 +776,7 @@ void CodeGenerator::topLevelsAction(TopLevels * top_levels_node){
 
     if(llvm::verifyFunction(*main_function)){
         // true indicates errors encountered.
-        fprintf(stderr,"Main not verified.\n");
+        spdlog::error("Main not verified.");
         throw BError();
     }
 }
@@ -788,10 +786,10 @@ void CodeGenerator::funcDefsAction(FuncDefs * func_defs_node){
 }
 void CodeGenerator::programAction(BProgram * program_node){
     program_node->funcDefsAccept(this);
-    fprintf(stderr,"Funcdefs COMPLETE\n");
+    spdlog::info("Functions Generated");
     program_node->topLevelsAccept(this);
-    fprintf(stderr,"Toplevels COMLETE \n");
-    fprintf(stderr,"Final stack size %lu\n", llvm_value_stack_.size());
+    spdlog::info("Top Level Statements Generated ");
+    spdlog::debug("Final stack size {0:d}", llvm_value_stack_.size());
 }
 
 } // namespace codegen

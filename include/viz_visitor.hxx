@@ -5,6 +5,7 @@
 #include <set>
 #include <fstream>
 #include "ast.hxx"
+#include "spdlog/spdlog.h"
 
 namespace bassoon{
 namespace viz{
@@ -15,7 +16,6 @@ class VizVisitor : public ASTVisitor{
     std::string output_filename_ = "../out/AST_Trees.dot";
     std::ofstream output_;
     std::set<std::string> node_base_names_;
-    int verbosity_ = 1;
     std::string phase_;
     std::string getCurrentName(std::string s);
     void advanceName(std::string s);

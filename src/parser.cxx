@@ -10,7 +10,6 @@ namespace bassoon
 int Parser::current_token_ = ' ';
 std::map<char,int> Parser::bin_op_precedence_ = std::map<char,int>({{'<', 5}, {'>',6}, {'-', 10}, {'+', 20}, {'/', 30}, {'*', 40}});
 std::function<int()> Parser::bassoon_nextTok_ = Lexer::nextTok;
-int Parser::verbosity_ = 0;
 
 
 void Parser::setSource(std::function<int()> source){
@@ -19,20 +18,17 @@ void Parser::setSource(std::function<int()> source){
 }
 
 int Parser::getNextToken(){
-    printParseAndToken("--");
+    logParseAndToken("--");
     return current_token_ = bassoon_nextTok_();
     //return Parser::current_token_ = Lexer::nextTok();
 }
 
+void inline Parser::logParseAndTokenCols(){
+    spdlog::debug("Parsing {0:<15} {1:<4} {2:<4} {3}", "AST Node", "Int", "Char", "Token Type");
+}
 
-void Parser::printParseAndToken(std::string parseFunction){
-    if (verbosity_ > 0){
-        fprintf(stderr, "Parsing %15s, " , parseFunction.c_str());
-        fprintf(stderr, "%3i ", current_token_);
-        fprintf(stderr, " %c  ", current_token_);
-        fprintf(stderr, "%s\n",  tokToStr(current_token_).c_str());
-    }
-    
+void inline Parser::logParseAndToken(std::string parseFunction){
+    spdlog::debug("Parsing {0:<15} {1:<4d} {2:<4} {3}", parseFunction, current_token_, (char) current_token_, tokToStr(current_token_));
 }
 
 std::unique_ptr<PrototypeAST> LogErrorP(std::string s){
@@ -64,23 +60,23 @@ int Parser::getTokPrecedence(){
 }
 
 std::unique_ptr<ExprAST> Parser::parseExpression(){
-    printParseAndToken("Expression");    // consume a primary (that could be unaried)
+    logParseAndToken("Expression");    // consume a primary (that could be unaried)
     auto lhs = Parser::parseUnary();
     if (!lhs)
         return LogError<std::unique_ptr<ExprAST>>("Error in parseExpression - no LHS");
 
     // Try to parse a possible right hand side of the expression.
-    printParseAndToken("Expr, nextBinop");
+    logParseAndToken("Expr, nextBinop");
     return parseBinaryOpRHS(0, std::move(lhs));
 }
 
 std::unique_ptr<ExprAST> Parser::parseUnary(){
-    printParseAndToken("Unary");
+    logParseAndToken("Unary");
     SourceLoc unary_loc = Lexer::getLoc();
     // !isascii(current_token_) 
     // means guaranteed to be a keyword and hence some other expression.
     if (!isascii(current_token_) || current_token_ == '('){
-        printParseAndToken("unary->primary");
+        logParseAndToken("unary->primary");
         return parsePrimary();
     }
     // otherwise it must be an operator
@@ -93,10 +89,10 @@ std::unique_ptr<ExprAST> Parser::parseUnary(){
 }
 
 std::unique_ptr<ExprAST> Parser::parsePrimary(){
-    printParseAndToken("Primary");
+    logParseAndToken("Primary");
     switch (current_token_){
         default:
-            printParseAndToken("parsePrim.Error");
+            logParseAndToken("parsePrim.Error");
             return LogErrorE("Unknown token when expecting an expression");
         case tok_identifier:
             return parseIdentifierExpr();
@@ -114,24 +110,24 @@ std::unique_ptr<ExprAST> Parser::parsePrimary(){
 }
 
 std::unique_ptr<ExprAST> Parser::parseBinaryOpRHS(int expr_precedence, std::unique_ptr<ExprAST> lhs){
-    printParseAndToken("BinaryOpRHS");
+    logParseAndToken("BinaryOpRHS");
     // lhs op rhs
     // lhs op rhs1 op rhs2
     // build up tree of binop(lhs rhs) ast nodes to represent whole expression
     while (true){
         // Operators have positive precedence. Non operators have negative precedence
         int tok_prec = getTokPrecedence(); 
-        printParseAndToken("binopCmp");
+        logParseAndToken("binopCmp");
         if (tok_prec < expr_precedence){
             // this is not a binop rhs
-            printParseAndToken("no more bin.");
+            logParseAndToken("no more bin.");
             return lhs;
         }
         // we are in a binop
         int bin_op = current_token_;
         SourceLoc bin_loc = Lexer::getLoc();
         getNextToken(); // consume the operator
-        printParseAndToken("bin op");
+        logParseAndToken("bin op");
         auto rhs = parseUnary();
         if (!rhs)
             return nullptr;
@@ -149,7 +145,7 @@ std::unique_ptr<ExprAST> Parser::parseBinaryOpRHS(int expr_precedence, std::uniq
 }
 
 std::unique_ptr<ExprAST> Parser::parseParenExpr(){
-    printParseAndToken("Paren");
+    logParseAndToken("Paren");
     getNextToken(); // consume '('
     auto expression = parseExpression();
     if (!expression)
@@ -163,7 +159,7 @@ std::unique_ptr<ExprAST> Parser::parseParenExpr(){
 }
 
 std::unique_ptr<ExprAST> Parser::parseBoolExpr(){
-    printParseAndToken("Bool");
+    logParseAndToken("Bool");
     SourceLoc bool_loc = Lexer::getLoc();
     if (current_token_ == tok_false){
         getNextToken();
@@ -177,7 +173,7 @@ std::unique_ptr<ExprAST> Parser::parseBoolExpr(){
 }
 
 std::unique_ptr<ExprAST> Parser::parseIntExpr(){
-    printParseAndToken("Int");
+    logParseAndToken("Int");
     SourceLoc int_loc = Lexer::getLoc();
     if (current_token_ == tok_number_int){
         int int_val = Lexer::getInt();
@@ -188,7 +184,7 @@ std::unique_ptr<ExprAST> Parser::parseIntExpr(){
 }
 
 std::unique_ptr<ExprAST> Parser::parseDoubleExpr(){
-    printParseAndToken("Double");
+    logParseAndToken("Double");
     SourceLoc double_loc = Lexer::getLoc();
     if (current_token_ == tok_number_double){
         double double_val = Lexer::getDouble();
@@ -199,7 +195,7 @@ std::unique_ptr<ExprAST> Parser::parseDoubleExpr(){
 }
 
 std::unique_ptr<ExprAST> Parser::parseIdentifierExpr(){
-    printParseAndToken("Identifier");
+    logParseAndToken("Identifier");
     SourceLoc identifier_loc = Lexer::getLoc();
     std::string identifier_name = Lexer::getIdentifier();
     getNextToken(); // move onto '(' or next token if not a call
@@ -209,11 +205,11 @@ std::unique_ptr<ExprAST> Parser::parseIdentifierExpr(){
     }
        
     getNextToken(); // consume '('
-    printParseAndToken("IdIsFun");
+    logParseAndToken("IdIsFun");
     std::vector<std::unique_ptr<ExprAST>> args;
     bool expecting_another_arg = false;
     if (current_token_ != ')'){
-        printParseAndToken("AnArg");
+        logParseAndToken("AnArg");
         while(true){
             if (auto arg = parseExpression()){
                 args.push_back(std::move(arg));
@@ -244,7 +240,7 @@ std::unique_ptr<ExprAST> Parser::parseIdentifierExpr(){
 // ----------------------
 
 std::unique_ptr<StatementAST> Parser::parseStatement(){
-    printParseAndToken("Statement");
+    logParseAndToken("Statement");
     switch(current_token_){
     case '{':
         return parseBlockStatement();
@@ -263,7 +259,7 @@ std::unique_ptr<StatementAST> Parser::parseStatement(){
     }
 }
 std::unique_ptr<StatementAST> Parser::parseBlockStatement(){
-    printParseAndToken("BlockStatement");
+    logParseAndToken("BlockStatement");
     SourceLoc block_loc = Lexer::getLoc();
     if (current_token_ != '{')
         return LogErrorS("Expected '{' to start block of statements");
@@ -271,18 +267,18 @@ std::unique_ptr<StatementAST> Parser::parseBlockStatement(){
 
     std::vector<std::unique_ptr<StatementAST>> statements;
     while(current_token_ != '}'){
-        printParseAndToken("start in block");
+        logParseAndToken("start in block");
         statements.push_back(parseStatement());
-        printParseAndToken("sttmnt in block");
+        logParseAndToken("sttmnt in block");
     }
 
-    printParseAndToken("} after block");
+    logParseAndToken("} after block");
     getNextToken(); // consume '}'
     return std::make_unique<BlockStatementAST>(block_loc, std::move(statements));
 }
 
 std::unique_ptr<StatementAST> Parser::parseIdentifierStatement(){
-    printParseAndToken("id statmnt.");
+    logParseAndToken("id statmnt.");
     // When a statement starts with an identifier, consume this and remember the location,
     // and lookahead to get relevant parsing statement.
     SourceLoc id_loc = Lexer::getLoc();
@@ -304,7 +300,7 @@ std::unique_ptr<StatementAST> Parser::parseIdentifierStatement(){
 }
 
 std::unique_ptr<StatementAST> Parser::parseCallStatement(SourceLoc id_loc, std::string id){
-    printParseAndToken("callStmnt.");
+    logParseAndToken("callStmnt.");
     // current_token should be '(' and we need to parse the args to create a CallExprAST
     if (current_token_ != '(')
         return LogErrorS("Expect '(' to be current token at start of parseCallStatement");
@@ -344,14 +340,14 @@ std::unique_ptr<StatementAST> Parser::parseCallStatement(SourceLoc id_loc, std::
         return LogErrorS("Expected call statement to end with ';'");
     getNextToken(); // consume ';'
 
-    printParseAndToken("callStEnd");
+    logParseAndToken("callStEnd");
     auto call_expr = std::make_unique<CallExprAST>(id_loc, id, std::move(args));
     return std::make_unique<CallStatementAST>(id_loc, std::move(call_expr));
 }
 
 std::unique_ptr<StatementAST> Parser::parseInitStatement(SourceLoc id_loc, std::string id){
     // of type = value;
-    printParseAndToken("Init");
+    logParseAndToken("Init");
 
     if (current_token_ != tok_of)
         return LogErrorS("Expect current token to be tok_of at start of parseInit");
@@ -367,11 +363,11 @@ std::unique_ptr<StatementAST> Parser::parseInitStatement(SourceLoc id_loc, std::
         return LogErrorS("Expected '=' after type in variable initialisation");
     getNextToken(); // consume '='
 
-    printParseAndToken("InitPreExpr");
+    logParseAndToken("InitPreExpr");
     auto value_expr = parseExpression();
     if(!value_expr)
         return LogErrorS("Error with value_expr of assignment");
-    printParseAndToken("InitEnd");
+    logParseAndToken("InitEnd");
     if(current_token_ != ';')
         return LogErrorS("Expected semicolon to end variable initialisation");
     getNextToken(); // consume ';'
@@ -381,7 +377,7 @@ std::unique_ptr<StatementAST> Parser::parseInitStatement(SourceLoc id_loc, std::
 }
 
 std::unique_ptr<StatementAST> Parser::parseAssignStatement(SourceLoc id_loc, std::string id){
-    printParseAndToken("assign");
+    logParseAndToken("assign");
     
     if(current_token_ != '=')
         return LogErrorS("Expected '=' after type in variable assignment");
@@ -391,17 +387,17 @@ std::unique_ptr<StatementAST> Parser::parseAssignStatement(SourceLoc id_loc, std
     if(!value)
         return LogErrorS("Error with value of assignment");
     
-    printParseAndToken("assign semi");
+    logParseAndToken("assign semi");
     if(current_token_ != ';')
         return LogErrorS("Expected semicolon to end variable assignment");
     getNextToken(); // consume ';'
-    printParseAndToken("as. after se");
+    logParseAndToken("as. after se");
 
     return std::make_unique<AssignStatementAST>(id_loc, id, std::move(value));
 }
 
 std::unique_ptr<StatementAST> Parser::parseIfStatement(){
-    printParseAndToken("If");
+    logParseAndToken("If");
     SourceLoc if_loc = Lexer::getLoc();
     if(current_token_ != tok_if)
         return LogErrorS("Expect if statement to start with tok_if");
@@ -415,7 +411,7 @@ std::unique_ptr<StatementAST> Parser::parseIfStatement(){
     std::unique_ptr<StatementAST> then, elsewise;
 
     cond = parseExpression();
-    printParseAndToken("ifCondParsed");
+    logParseAndToken("ifCondParsed");
 
     if(current_token_ != ')')
         return LogErrorS("Expected ')' to end condition expression.");
@@ -440,7 +436,7 @@ std::unique_ptr<StatementAST> Parser::parseIfStatement(){
 
 std::unique_ptr<StatementAST> Parser::parseForStatement(){
     // for (setup identifier statement; comp exp; step identifier statement) block_statement
-    printParseAndToken("for");
+    logParseAndToken("for");
     SourceLoc for_loc = Lexer::getLoc();
 
     if (current_token_ != tok_for)
@@ -451,12 +447,12 @@ std::unique_ptr<StatementAST> Parser::parseForStatement(){
         return LogErrorS("Expected '(' to start for loop induction statements.");
     getNextToken(); // consume '('
 
-    printParseAndToken("forSetup");
+    logParseAndToken("forSetup");
     auto setup_statement = parseIdentifierStatement(); // call(), var of type = val or var = val;
     if(!setup_statement)
         return LogErrorS("Error with for loop setup statement");
     
-    printParseAndToken("forCond");
+    logParseAndToken("forCond");
     auto condition_expr = parseExpression();
     if(!condition_expr)
         return LogErrorS("Error with for loop condition expression");
@@ -466,7 +462,7 @@ std::unique_ptr<StatementAST> Parser::parseForStatement(){
         return LogErrorS("Expected ';' to separate condition expression from step statement.");
     getNextToken(); // consume ';'
     
-    printParseAndToken("forStep");
+    logParseAndToken("forStep");
     auto step_statement = parseIdentifierStatement();
     if(!step_statement)
         return LogErrorS("Error with for loop step statement");
@@ -475,7 +471,7 @@ std::unique_ptr<StatementAST> Parser::parseForStatement(){
         return LogErrorS("Expected ')' to end for loop induction statements.");
     getNextToken(); // consume ')'
 
-    printParseAndToken("forBody");
+    logParseAndToken("forBody");
     auto body = parseBlockStatement();
     if(!body)
         return LogErrorS("Error with for loop body");
@@ -485,7 +481,7 @@ std::unique_ptr<StatementAST> Parser::parseForStatement(){
 
 std::unique_ptr<StatementAST> Parser::parseWhileStatement(){
     // while (expr) statement block
-    printParseAndToken("While");
+    logParseAndToken("While");
     SourceLoc while_loc = Lexer::getLoc();
     
     if(current_token_ != tok_while)
@@ -496,7 +492,7 @@ std::unique_ptr<StatementAST> Parser::parseWhileStatement(){
         return LogErrorS("Expected '(' to start for loop induction statements.");
     getNextToken(); // consume '('
 
-    printParseAndToken("whileCond");
+    logParseAndToken("whileCond");
     auto condition_expr = parseExpression();
     if(!condition_expr)
         return LogErrorS("Error with while loop condition expression");
@@ -513,7 +509,7 @@ std::unique_ptr<StatementAST> Parser::parseWhileStatement(){
 }
 
 std::unique_ptr<StatementAST> Parser::parseReturnStatement(){
-    printParseAndToken("Return");
+    logParseAndToken("Return");
     SourceLoc return_loc = Lexer::getLoc();
     if (current_token_ != tok_return)
         return LogErrorS("Expect return statement to start with tok_return");
@@ -533,7 +529,7 @@ std::unique_ptr<StatementAST> Parser::parseReturnStatement(){
 
 std::unique_ptr<FunctionAST> Parser::parseDefinition(){
     // define foo(var of type...) [gives type] as statement block   
-    printParseAndToken("dfntion.");
+    logParseAndToken("dfntion.");
     SourceLoc def_loc = Lexer::getLoc();
 
     if(current_token_ != tok_define)
@@ -557,7 +553,7 @@ std::unique_ptr<FunctionAST> Parser::parseDefinition(){
 
 std::unique_ptr<PrototypeAST> Parser::parsePrototype(){
     // foo([var of type]*) [gives type]
-    printParseAndToken("prototype");
+    logParseAndToken("prototype");
     SourceLoc proto_loc = Lexer::getLoc();
 
     std::string function_name;
@@ -581,7 +577,7 @@ std::unique_ptr<PrototypeAST> Parser::parsePrototype(){
     bool expecting_arg = false;
     while (current_token_ != ')'){
         // var of type [,]
-        printParseAndToken("protoAList");
+        logParseAndToken("protoAList");
 
         if(current_token_ != tok_identifier)
             return LogErrorP("Expect arguments in form [identifier of type]");
@@ -612,7 +608,7 @@ std::unique_ptr<PrototypeAST> Parser::parsePrototype(){
         return LogErrorP("Stray ',' at end of argument list");
     getNextToken(); // consume ')' (guarunteed by loop breaking)
 
-    printParseAndToken("prtoListDone");
+    logParseAndToken("prtoListDone");
     if(current_token_ == tok_gives){
         getNextToken(); // consume gives
         if(!tokIsType(current_token_))
@@ -634,50 +630,45 @@ std::unique_ptr<PrototypeAST> Parser::parsePrototype(){
 
 
 std::unique_ptr<BProgram> Parser::parseLoop(){
+    logParseAndTokenCols();
     std::vector<std::unique_ptr<StatementAST>> top_level_statements;
     std::vector<std::unique_ptr<FunctionAST>> function_definitions;
     while(true){
-        printParseAndToken("mainLoop");
+        logParseAndToken("mainLoop");
         switch(current_token_){
             case 32: { // ' '
                 getNextToken();
                 break;
             };
             case tok_define: {
-                printParseAndToken("define");
+                logParseAndToken("define");
                 auto def = parseDefinition();
                 if(!def){
-                    fprintf(stderr,"Error parsing definition\n");
+                    spdlog::error("Error parsing definition");
                     throw BError();
                 }
                 function_definitions.push_back(std::move(def));
-                if(verbosity_)
-                    fprintf(stderr, "Parsed Definitionn Successfully\n");
+                spdlog::info("Parsed Definition Successfully");
                 break;
             };
             case tok_eof: {
-                printParseAndToken("EOF");
+                logParseAndToken("EOF");
                 std::unique_ptr<TopLevels> top_levels = std::make_unique<TopLevels>(std::move(top_level_statements));
                 std::unique_ptr<FuncDefs> func_defs = std::make_unique<FuncDefs>(std::move(function_definitions));
                 return std::make_unique<BProgram>(std::move(top_levels), std::move(func_defs));
             };
             default: {
-                printParseAndToken("default");
+                logParseAndToken("default");
                 auto statement = parseStatement();
                 if(!statement){
-                    fprintf(stderr,"Error parsing statement\n");
+                    spdlog::error("Error parsing statement");
                     throw BError();
                 }
                 top_level_statements.push_back(std::move(statement));
-                if(verbosity_)
-                    fprintf(stderr, "Parsed Top Level Statement Successfully\n");
+                spdlog::info("Parsed Top Level Statement Succesfully");
             };
         }
     }
-    // *
-    // std::unique_ptr<TopLevels> top_levels = std::make_unique<TopLevels>(std::move(top_level_statements));
-    // std::unique_ptr<FuncDefs> func_defs = std::make_unique<FuncDefs>(std::move(function_definitions));
-    // return std::make_unique<BProgram>(std::move(top_levels), std::move(func_defs));
 }
 
 } // namespace bassoon

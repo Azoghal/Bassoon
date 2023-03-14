@@ -4,6 +4,7 @@
 #include <map>
 #include <memory>
 #include "ast.hxx"
+#include "spdlog/spdlog.h"
 
 
 namespace bassoon
@@ -15,9 +16,9 @@ class Parser{
     static int getNextToken();
     static int getTokPrecedence();
     static std::function<int()> bassoon_nextTok_;
-    static int verbosity_;
 
-    static void printParseAndToken(std::string parseFunction);
+    static void logParseAndTokenCols();
+    static void logParseAndToken(std::string parseFunction);
 
     static std::unique_ptr<ExprAST> parseExpression();
     static std::unique_ptr<ExprAST> parseUnary();
@@ -50,12 +51,9 @@ public:
     static void setBinopPrecedence(std::map<char,int> precedents);
     static std::unique_ptr<BProgram> parseLoop();
     static void setSource(std::function<int()> source);
-
-    static void setVerbosity(int verbosity){verbosity_ = verbosity;};
     
     // Only for use in test
     static std::unique_ptr<ExprAST> _testParseExpression(){return parseExpression();};
-    // static std::unique_ptr<StatementAST> _testParseStatement(){return parseStatement();};
     static void _testResetCurrentToken(){current_token_ = ' ';};
 };
 

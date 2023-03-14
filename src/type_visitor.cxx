@@ -10,18 +10,6 @@ namespace bassoon
 namespace typecheck
 {
 
-void typingMessage(std::string message){
-    fprintf(stderr, "%s\n", message.c_str());
-}
-
-void typingMessage(std::string message, std::string var_or_func_name){
-    fprintf(stderr, "%s: %s\n", message.c_str(),var_or_func_name.c_str());
-}
-
-void typingMessage(std::string message, std::string var_or_func_name, std::string loc_str){
-    fprintf(stderr, "%s: %s at %s\n", message.c_str(), var_or_func_name.c_str(), loc_str.c_str());
-}
-
 std::string tPhaseToStr(typing_phase tp){
     switch(tp){
     case(tp_lang_var):{
@@ -81,7 +69,7 @@ void TypeVisitor::typecheckTopLevels(std::shared_ptr<TopLevels> top_levels){
 BType TypeVisitor::typeContext(std::string identifier){
     std::vector<BType> identifier_types = identifier_stacks_[identifier];
     if (identifier_types.size() == 0){
-        typingMessage("Variable referenced before definition", identifier);
+        spdlog::error("Variable {0} referenced before definition", identifier);
         throw BError();
     }
     return identifier_types[identifier_types.size()-1];
@@ -90,7 +78,7 @@ BType TypeVisitor::typeContext(std::string identifier){
 BFType TypeVisitor::funcContext(std::string func_name){
     BFType func_type = func_types_[func_name];
     if (!func_type.isValid()){
-        typingMessage("Function not defined", func_name);
+        spdlog::error("Function {0} not defined", func_name);
         throw BError();
     }
     return func_type;
@@ -167,50 +155,56 @@ bool TypeVisitor::isInCurrentScope(std::string candidate_id){
 }
 
 void TypeVisitor::printCurrentScopeDefinitions(){
-    std::vector<std::string> current_scope = getCurrentScope();
-    int columns = current_scope.size();
-    int max_height = 1;
-    fprintf(stderr,"\n");
-    // 5 characters for column, 1 character gap
-    for(auto var:current_scope){
-        // stack big enough to print one.
-        fprintf(stderr,"%5s ",typeToStr(typeContext(var)).c_str());
+    if(spdlog::get_level() <= spdlog::level::debug){
+        spdlog::debug("Printing Current Scope Definitions");
+        std::vector<std::string> current_scope = getCurrentScope();
+        int columns = current_scope.size();
+        int max_height = 1;
+        fprintf(stderr,"\n");
+        // 5 characters for column, 1 character gap
+        for(auto var:current_scope){
+            // stack big enough to print one.
+            fprintf(stderr,"%5s ",typeToStr(typeContext(var)).c_str());
+        }
+        fprintf(stderr,"\n");
+        for(auto var:current_scope){
+            fprintf(stderr,"%5s ",var.c_str());
+        }
+        fprintf(stderr,"\nCurrent Scope Definitions\n");
     }
-    fprintf(stderr,"\n");
-    for(auto var:current_scope){
-        fprintf(stderr,"%5s ",var.c_str());
-    }
-    fprintf(stderr,"\nCurrent Scope Definitions\n");
 }
 
 
 void TypeVisitor::printVarScopes(){
-    // print all the stacks of identifiers
-    int columns = identifier_stacks_.size();
-    int max_height = 0;
-    for(auto var_stack: identifier_stacks_){
-        if (var_stack.second.size() > max_height){
-            max_height = var_stack.second.size();
-        }
-    }
-    fprintf(stderr,"\n");
-    // 5 characters for column, 1 character gap
-    for(int i = max_height-1; i >= 0; --i){
-        for(auto var_stack:identifier_stacks_){
-            if(var_stack.second.size()>i){
-                // stack big enough to print one.
-                fprintf(stderr,"%5s ",typeToStr(var_stack.second[i]).c_str());
-            }else{
-                fprintf(stderr,"      "); // to make columns allign
+    if(spdlog::get_level() <= spdlog::level::debug){
+        spdlog::debug("Printing Var Scopes");
+        // log all the stacks of identifiers
+        int columns = identifier_stacks_.size();
+        int max_height = 0;
+        for(auto var_stack: identifier_stacks_){
+            if (var_stack.second.size() > max_height){
+                max_height = var_stack.second.size();
             }
         }
         fprintf(stderr,"\n");
-    }
-    for(auto var_stack:identifier_stacks_){
-        fprintf(stderr,"%5s ",var_stack.first.c_str());
-    }
-    fprintf(stderr,"\nOverall Stacks\n");
-    printCurrentScopeDefinitions();
+        // 5 characters for column, 1 character gap
+        for(int i = max_height-1; i >= 0; --i){
+            for(auto var_stack:identifier_stacks_){
+                if(var_stack.second.size()>i){
+                    // stack big enough to print one.
+                    fprintf(stderr,"%5s ",typeToStr(var_stack.second[i]).c_str());
+                }else{
+                    fprintf(stderr,"      "); // to make columns allign
+                }
+            }
+            fprintf(stderr,"\n");
+        }
+        for(auto var_stack:identifier_stacks_){
+            fprintf(stderr,"%5s ",var_stack.first.c_str());
+        }
+        fprintf(stderr,"\nOverall Stacks\n");
+        printCurrentScopeDefinitions();
+    }  
 }
 
 //-------------------
@@ -219,7 +213,7 @@ void TypeVisitor::printVarScopes(){
 
 BType TypeVisitor::popReturnType(){
     if(return_type_stack_.size() == 0){
-        typingMessage("Ran out of return types");
+        spdlog::error("Ran out of return types");
         throw BError();
     }
     else{
@@ -231,7 +225,7 @@ BType TypeVisitor::popReturnType(){
 
 void TypeVisitor::checkRetStackSize(int original_size){
     if(original_size != return_type_stack_.size()){
-        typingMessage("Return type stack size differs from original expected.", std::to_string(original_size), std::to_string(return_type_stack_.size()));
+        spdlog::warn("Return type stack size {1:d} differs from expected original val{0:d}", original_size, return_type_stack_.size());
     }
 }
 
@@ -259,18 +253,18 @@ bool hasType(std::shared_ptr<ExprAST> node){
 
 void TypeVisitor::boolExprAction(BoolExprAST * bool_node) {
     if (bool_node->getType() == type_unknown){
-        typingMessage("bool expression without known type", "", bool_node->getLocStr());
+        spdlog::warn("bool expression without known type at {0}", bool_node->getLocStr());
     } 
 }
 
 void TypeVisitor::intExprAction(IntExprAST * int_node) {
     if (int_node->getType() == type_unknown){
-        typingMessage("int expression without known type", "", int_node->getLocStr());
+        spdlog::warn("int expression without known type {0}", int_node->getLocStr());
     } 
 }
 void TypeVisitor::doubleExprAction(DoubleExprAST * double_node) {
     if (double_node->getType() == type_unknown){
-        typingMessage("double expression without known type", "", double_node->getLocStr());
+        spdlog::warn("double expression without known type {0}", double_node->getLocStr());
     } 
 }
 
@@ -279,7 +273,7 @@ void TypeVisitor::variableExprAction(VariableExprAST * variable_node) {
     std::string variable_name = variable_node->getName();
     if (!varIsDefined(variable_name)){
         std::string loc_str = variable_node->getLocStr();
-        typingMessage("Variable not defined before use", variable_name, loc_str);
+        spdlog::error("Variable {0} not defined before use at {1}", variable_name, loc_str);
         throw BError();
     }else{
         variable_node->setType(typeContext(variable_name));
@@ -290,7 +284,7 @@ void TypeVisitor::callExprAction(CallExprAST * call_node) {
     std::string func_name = call_node->getName();
     if(!funcIsDefined(func_name)){
         std::string loc_str = call_node->getLocStr();
-        typingMessage("Function not defined before use", func_name, loc_str);
+        spdlog::error("Function {0} not defined before use at {1}", func_name, loc_str);
         throw BError();
     }
     
@@ -300,7 +294,7 @@ void TypeVisitor::callExprAction(CallExprAST * call_node) {
     // Try to type all the args
     call_node->resetArgIndex();
     while(call_node->anotherArg()){
-        fprintf(stderr,"Typing an arg\n");
+        spdlog::debug("Typing an arg");
         call_node->argAcceptOne(this); 
     }
 
@@ -312,15 +306,26 @@ void TypeVisitor::callExprAction(CallExprAST * call_node) {
         BType arg_expr_type = arg_expr.getType();
         BType expected_type = expected_arg_types[arg_i];
         if(arg_expr_type != expected_type){
-            std::string arg_type_str = 
-                "Exp: " + typeToStr(expected_arg_types[arg_i])
-                + "Actual: " + typeToStr(arg_expr.getType())
-                + arg_expr.getLocStr();
-            typingMessage("Arg doesn't match", func_name, arg_type_str);
+            std::string type_str = typeToStr(arg_expr.getType());
+            std::string expected_type_str = typeToStr(expected_arg_types[arg_i]);
             if(isCastable(arg_expr_type, expected_type)){
-                typingMessage("Allowing cast");
+                spdlog::debug("Type of arg {0:d}: {1} in call of function {2} at {3} doesn't match expected type {4}",
+                    arg_i, 
+                    type_str,
+                    func_name,
+                    call_node->getLocStr(),
+                    expected_type_str
+                );
+                spdlog::debug("Allowing cast");
             }
             else{
+                spdlog::error("Type of arg {0:d}: {1} in call of function {2} at {3} doesn't match expected type {4}",
+                    arg_i, 
+                    type_str,
+                    func_name,
+                    call_node->getLocStr(),
+                    expected_type_str
+                );
                 throw BError();
             }
         }
@@ -337,8 +342,8 @@ void TypeVisitor::unaryExprAction(UnaryExprAST * unary_node) {
     unary_node->operandAccept(this);
     auto operand = unary_node->getOperand();
     if(!hasType(operand)){
-        typingMessage("Unary operand has unkown type", "", operand.getLocStr());
-        return;
+        spdlog::error("Unary operand {0} at {1} has unkown type",opcode, operand.getLocStr());
+        throw BError();
     }
 
     BType operand_type = operand.getType();
@@ -354,7 +359,8 @@ void TypeVisitor::unaryExprAction(UnaryExprAST * unary_node) {
     }
 
     if (result_type == type_unknown){
-        typingMessage("Unary operator not defined for operand type");
+        spdlog::error("Unary operator {0} at {1} not defined for operand type {2}",opcode, unary_node->getLocStr(), typeToStr(operand_type));
+        throw BError();
     }
     unary_node->setType(result_type);
 }
@@ -370,15 +376,15 @@ void TypeVisitor::binaryExprAction(BinaryExprAST * binary_node) {
     binary_node->lhsAccept(this);
     auto lhs = binary_node->getLHS();
     if(!hasType(lhs)){
-        typingMessage("binary operand lhs has unkown type", "", lhs.getLocStr());
-        return;
+        spdlog::error("binary operand lhs at {0} has unkown type", lhs.getLocStr());
+        throw BError();
     }
 
     binary_node->rhsAccept(this);
     auto rhs = binary_node->getRHS();
     if(!hasType(rhs)){
-        typingMessage("binary operand rhs has unkown type", "", rhs.getLocStr());
-        return;
+        spdlog::error("binary operand rhs at {0} has unkown type", rhs.getLocStr());
+        throw BError();
     }
 
     BType lhs_type = lhs.getType();
@@ -386,7 +392,7 @@ void TypeVisitor::binaryExprAction(BinaryExprAST * binary_node) {
     BType result_type = type_unknown;
     std::vector<BFType> possible_types = binary_operators[opcode];
     if(possible_types.size() == 0){
-        fprintf(stderr,"unknown binary operator in typpecheck phase, %s %c\n", binary_node->getLocStr().c_str(), opcode);
+        spdlog::error("unknown binary operator {0} at {1} in typpecheck phase",opcode, binary_node->getLocStr());
         throw BError();
     }
     for (BFType f_type: possible_types){
@@ -398,7 +404,8 @@ void TypeVisitor::binaryExprAction(BinaryExprAST * binary_node) {
     }
 
     if (result_type == type_unknown){
-        typingMessage("Binary operator not defined for operand types");
+        spdlog::error("Binary operator {0} at {1} not defined for operand types {2}, {3}", opcode, binary_node->getLocStr(), typeToStr(lhs_type), typeToStr(rhs_type));
+        throw BError();
     }
     binary_node->setType(result_type);
 }
@@ -419,11 +426,11 @@ void TypeVisitor::ifStAction(IfStatementAST * if_node){
     if_node->condAccept(this);
     auto cond_node = if_node->getCond();
     if (!hasType(cond_node)){
-        typingMessage("If statement condition expression failed to type","",cond_node.getLocStr());
+        spdlog::error("If statement condition at {0} failed to type",cond_node.getLocStr());
         throw BError();
     }
     if(cond_node.getType() != type_bool){
-        typingMessage("If statement condition not a bool expression","",cond_node.getLocStr());
+        spdlog::error("If statement condition at {0} not a bool expression",cond_node.getLocStr());
         throw BError();
     }
 
@@ -446,7 +453,7 @@ void TypeVisitor::ifStAction(IfStatementAST * if_node){
             return_type_stack_.push_back(else_ret_type);
             return;
         }else{
-            typingMessage("If statement then and else blocks have different return types.",then_node.getLocStr(),if_node->getLocStr());
+            spdlog::error("If statement then at {0} and else at {1} blocks have different return types, {2}, {3}",then_node.getLocStr(),if_node->getLocStr(), typeToStr(then_ret_type), typeToStr(else_ret_type));
             throw BError();
         }
     }
@@ -458,7 +465,8 @@ void TypeVisitor::ifStAction(IfStatementAST * if_node){
         return_type_stack_.push_back(then_ret_type);
         return;
     }
-    typingMessage("ERROR - if return type checking code broken");
+    spdlog::error("If return type checking");
+    throw BError();
 }
 
 void TypeVisitor::forStAction(ForStatementAST * for_node){
@@ -476,11 +484,11 @@ void TypeVisitor::forStAction(ForStatementAST * for_node){
     for_node->endAccept(this);
     auto end_node = for_node->getEnd();
     if(!hasType(end_node)){
-        typingMessage("For statement condition not well typed");
+        spdlog::error("For statement condition at {0} not well typed", end_node.getLocStr());
         throw BError();
     }
     if(end_node.getType() != type_bool){
-        typingMessage("For statement condition not a bool");
+        spdlog::error("For statement condition at {0} not a bool", end_node.getLocStr());
         throw BError();
     }
 
@@ -504,11 +512,11 @@ void TypeVisitor::whileStAction(WhileStatementAST * while_node){
     while_node->condAccept(this);
     auto end_node = while_node->getCond();
     if(!hasType(end_node)){
-        typingMessage("While statement condition not well typed");
+        spdlog::error("While statement condition at {0} not well typed", end_node.getLocStr());
         throw BError();
     }
     if(end_node.getType() != type_bool){
-        typingMessage("While statement condition not a bool");
+        spdlog::error("While statement condition at {0} not a bool", end_node.getLocStr());
         throw BError();
     }
     
@@ -522,10 +530,10 @@ void TypeVisitor::returnStAction(ReturnStatementAST * return_node){
     return_node->returnExprAccept(this);
     auto expr_node = return_node->getReturnExpr();
     if (!hasType(expr_node)){
-        typingMessage("Return expression failed to type","",expr_node.getLocStr());
+        spdlog::error("Return expression at {0} failed to type", expr_node.getLocStr());
         throw BError();
     }
-    typingMessage("Adding return type to stack from return at ", return_node->getLocStr());
+    spdlog::debug("Adding return type {0} to stack from return at {1}",typeToStr(expr_node.getType()), return_node->getLocStr());
     return_type_stack_.push_back(expr_node.getType());
 }
 
@@ -543,18 +551,18 @@ void TypeVisitor::blockStAction(BlockStatementAST * block_node){
     // (if there is agreement)
     pushNewScope();
     int original_ret_size = return_type_stack_.size();
-    int isc; // inner statement count
+    int inner_statement_count; // inner statement count
     block_node->resetStatementIndex();
-    for(isc = 0; block_node->anotherStatement(); ++isc){
+    for(inner_statement_count = 0; block_node->anotherStatement(); ++inner_statement_count){
         // check that the statements type well
         block_node->statementAcceptOne(this);
     }
     printVarScopes();
     // Now need to check that return types match
 
-    typingMessage("statement block inner statements: ", std::to_string(isc), block_node->getLocStr());
+    spdlog::debug("statement block at {1} has {0:d} inner statements", inner_statement_count, block_node->getLocStr());
     int number_pushed = return_type_stack_.size() - original_ret_size;
-    typingMessage("number of pushed ret types", std::to_string(number_pushed));
+    spdlog::debug("number of pushed ret types: {0:d}", number_pushed);
 
     // pop all the contained returned types and add them to the set
     std::set<BType> contained_return_types;
@@ -570,7 +578,7 @@ void TypeVisitor::blockStAction(BlockStatementAST * block_node){
             disagreed.append(typeToStr(bt));
             disagreed.append(" ");
         }
-        typingMessage("Disagreement in return type", disagreed);
+        spdlog::error("Disagreement in return type in return of block at {0}; {1}",block_node->getLocStr(), disagreed);
         throw BError();
     }
 
@@ -592,7 +600,7 @@ void TypeVisitor::blockStAction(BlockStatementAST * block_node){
 void TypeVisitor::callStAction(CallStatementAST * call_node){
     std::string function_name = call_node->getCall().getName();
     if (!isInFuncContext(function_name)){
-        typingMessage("Function not defined at use",function_name,call_node->getLocStr());
+        spdlog::error("Function {0} not defined before use at {1}", function_name,call_node->getLocStr());
         throw BError();
     }
     BFType func_type = funcContext(function_name);
@@ -600,7 +608,7 @@ void TypeVisitor::callStAction(CallStatementAST * call_node){
     // Arg type checking done by the expression
     call_node->callAccept(this);
     if(!hasType(call_node->getCall())){
-        typingMessage("Call statement - call expression doesn't type");
+        spdlog::error("Call statement at {0} - expression doesn't type", call_node->getLocStr());
         throw BError();
     }
     // call statements have their return value thrown away
@@ -612,7 +620,7 @@ void TypeVisitor::assignStAction(AssignStatementAST * assign_node){
     // 1. a in scope definitions
     std::string assigned_var = assign_node->getIdentifier();
     if(!varIsDefined(assigned_var)){
-        typingMessage("Assigned variable not defined", assigned_var, assign_node->getLocStr());
+        spdlog::error("Assigned variable {0} not defined before use at {1}", assigned_var, assign_node->getLocStr());
         throw BError();
     }
     // var is defined
@@ -623,18 +631,21 @@ void TypeVisitor::assignStAction(AssignStatementAST * assign_node){
     assign_node->valueAccept(this);
     auto value_expr = assign_node->getValue();
     if(!hasType(value_expr)){
-        typingMessage("Assignment value not well typed", value_expr.getLocStr());
+        spdlog::error("Assignment value at {0} not well typed", value_expr.getLocStr());
         throw BError();
     }
     BType val_expr_type = value_expr.getType();
 
     // 3. expr type matches uppermost var definition;
-    if (val_expr_type != defined_type){
-        typingMessage("Variable and expression type do not match", typeToStr(defined_type)+typeToStr(val_expr_type), assign_node->getLocStr());
+    if (val_expr_type != defined_type){ 
+        std::string def_type_str = typeToStr(defined_type);
+        std::string val_type_str = typeToStr(val_expr_type);
         if(isCastable(val_expr_type,defined_type)){
-            typingMessage("Allowing cast from, to",typeToStr(val_expr_type),typeToStr(defined_type));
+            spdlog::debug("Variable type {0} and expression type {1} do not match at {2}", val_type_str, def_type_str, assign_node->getLocStr());
+            spdlog::debug("Allowing cast from {0} to {1}", val_type_str, def_type_str);
         }
         else{
+            spdlog::error("Variable type {0} and expression type {1} do not match at {2}", val_type_str, def_type_str, assign_node->getLocStr());
             throw BError();
         }
     }
@@ -646,7 +657,7 @@ void TypeVisitor::initStAction(InitStatementAST * init_node){
     // 1. a not in current scope definitions
     std::string init_id_str = init_node->getIdentifier();
     if (isInCurrentScope(init_id_str)){
-        typingMessage("Identifier previously defined in this scope", init_node->getIdentifier());
+        spdlog::error("Identifier {0} previously defined in this scope", init_node->getIdentifier());
         throw BError();
     }
     BType type = init_node->getType();
@@ -664,11 +675,11 @@ void TypeVisitor::initStAction(InitStatementAST * init_node){
 void TypeVisitor::prototypeAction(PrototypeAST * proto_node){
     switch(typecheck_phase_){
     case(tp_func_proto):{
-        typingMessage("adding prototype to context");
+        spdlog::debug("adding prototype to context");
         // adding the prototypes, so check not already defined.
         std::string f_name = proto_node->getName();
         if(isInFuncContext(f_name)){
-            typingMessage("Function already defined",f_name, proto_node->getLocStr());
+            spdlog::error("Function {0} at {1} already defined",f_name, proto_node->getLocStr());
             throw BError();
         }
         BFType f_type = proto_node->getType();
@@ -676,7 +687,7 @@ void TypeVisitor::prototypeAction(PrototypeAST * proto_node){
         break;
     }
     case(tp_func_check):{
-        typingMessage("adding proto var definitions for body typecheck");
+        spdlog::debug("adding proto var definitions for body typecheck");
         // checking the function body so populate var scopes with arguments
         for (auto [var_id, var_type] : proto_node->getArgs()){
             addVarDefinition(var_id,var_type);
@@ -684,7 +695,7 @@ void TypeVisitor::prototypeAction(PrototypeAST * proto_node){
         break;
     }
     default:{
-        typingMessage("func proto typechecked in unexpected phase: ", tPhaseToStr(typecheck_phase_));
+        spdlog::warn("func proto typechecked in unexpected phase: ", tPhaseToStr(typecheck_phase_));
     }
     }
 }
@@ -693,12 +704,12 @@ void TypeVisitor::functionAction(FunctionAST * func_node){
     switch(typecheck_phase_){
     case(tp_func_proto):{
         // populate func and var context with proto accept
-        typingMessage("Accepting a function in proto phase");
+        spdlog::debug("Accepting a function in proto phase");
         func_node->protoAccept(this);
         break;
     }
     case(tp_func_check):{
-        typingMessage("Accepting function in func typecheck phase");
+        spdlog::debug("Accepting function in func typecheck phase");
         int original_ret_size = return_type_stack_.size();
         BType return_type = func_node->getType().getReturnType();
         // Push new scope for argument definitions
@@ -715,13 +726,15 @@ void TypeVisitor::functionAction(FunctionAST * func_node){
         BType body_return_type = popReturnType();
         checkRetStackSize(original_ret_size);
         if(body_return_type != return_type){
-            typingMessage("Function body does not have same return type as prototype", func_node->getProto().getName(), func_node->getLocStr());
+            std::string body_str = typeToStr(body_return_type);
+            std::string expected_str = typeToStr(return_type);
+            spdlog::error("Function {0}'s body has return type {1} that does not match {2} in prototype at {3}", func_node->getProto().getName(), body_str, expected_str, func_node->getLocStr());
             throw BError();
         }
         break;
     }
     default:{
-        typingMessage("func typechecked in unexpected phase: ", tPhaseToStr(typecheck_phase_));
+        spdlog::error("func typechecked in unexpected phase {0}", tPhaseToStr(typecheck_phase_));
     }
     }
 }
@@ -729,17 +742,17 @@ void TypeVisitor::functionAction(FunctionAST * func_node){
 void TypeVisitor::topLevelsAction(TopLevels * top_levels_node){
     switch(typecheck_phase_){
     case tp_user_glob:{
-        typingMessage("Add top level globals to context phase, not yet in language");
+        spdlog::warn("Add top level globals to context phase, not yet in language");
         break;
     }
     case tp_top_lvl_check:{
         // typecheck the top level statements
-        typingMessage("accepting all top level statements in top level typecheck phase");
+        spdlog::debug("accepting all top level statements in top level typecheck phase");
         top_levels_node->statementsAllAccept(this);
         break;
     }
     default:{
-        typingMessage("Unexpected call to topLevelsAction in typecheck phase", tPhaseToStr(typecheck_phase_));
+        spdlog::warn("Unexpected call to topLevelsAction in typecheck phase {0}", tPhaseToStr(typecheck_phase_));
     }
     } 
 }
@@ -748,18 +761,18 @@ void TypeVisitor::funcDefsAction(FuncDefs * func_defs_node){
     switch(typecheck_phase_){
     case tp_func_proto:{
         // Find protos and add them to context
-        typingMessage("accepting all functions in proto phase");
+        spdlog::debug("accepting all functions in proto phase");
         func_defs_node->functionsAllAccept(this);
         break;
     }
     case tp_func_check:{
         // typecheck the bodies against the protos
-        typingMessage("accepting all functions in function check phase");
+        spdlog::debug("accepting all functions in function check phase");
         func_defs_node->functionsAllAccept(this);
         break;
     }
     default:{
-        typingMessage("Unexpected call to funcDefsAction in typecheck phase", tPhaseToStr(typecheck_phase_));
+        spdlog::warn("Unexpected call to funcDefsAction in typecheck phase", tPhaseToStr(typecheck_phase_));
     }
     }
 }
@@ -772,37 +785,37 @@ void TypeVisitor::programAction(BProgram * program_node){
     // 5 - typecheck all the function definitions
     // 6 - typecheck all the top level statements (even if some functions didn't typecheck)
     
-    typingMessage("TYPECHECKING");
+    spdlog::info("TYPECHECKING");
 
     // Phase 1 - language variable context
     typecheck_phase_ = tp_lang_var;
-    typingMessage("Phase 1",tPhaseToStr(typecheck_phase_));
+    spdlog::info("Phase 1 {0}",tPhaseToStr(typecheck_phase_));
     // go over all the language variables
 
     // Phase 2 - language function context
     typecheck_phase_ = tp_lang_fun;
-    typingMessage("Phase 2",tPhaseToStr(typecheck_phase_));
+    spdlog::info("Phase 2 {0}",tPhaseToStr(typecheck_phase_));
     // go over all the language inbuilt functions
 
     // Phase 3 - function prototypes
     typecheck_phase_ = tp_func_proto;
-    typingMessage("Phase 3",tPhaseToStr(typecheck_phase_));
+    spdlog::info("Phase 3 {0}",tPhaseToStr(typecheck_phase_));
     program_node->funcDefsAccept(this);
 
     // Phase 4 - user globals (currently not in language)
     typecheck_phase_ = tp_user_glob;
-    typingMessage("Phase 4",tPhaseToStr(typecheck_phase_));
+    spdlog::info("Phase 4 {0}",tPhaseToStr(typecheck_phase_));
     program_node->topLevelsAccept(this);
     
 
     // Phase 5 - function typecheck
     typecheck_phase_ = tp_func_check;
-    typingMessage("Phase 5",tPhaseToStr(typecheck_phase_));
+    spdlog::info("Phase 5 {0}",tPhaseToStr(typecheck_phase_));
     program_node->funcDefsAccept(this);
 
     // Phase 6 - top level statement typecheck
     typecheck_phase_ = tp_top_lvl_check;
-    typingMessage("Phase 6",tPhaseToStr(typecheck_phase_));
+    spdlog::info("Phase 6 {0}",tPhaseToStr(typecheck_phase_));
     program_node->topLevelsAccept(this);
 }
 

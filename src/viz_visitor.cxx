@@ -15,9 +15,7 @@ VizVisitor::VizVisitor(std::string phase){
 }
 
 VizVisitor::~VizVisitor(){
-    if(verbosity_){
-        fprintf(stderr,"closing file\n");
-    }
+    spdlog::info("Closing File {0}", output_filename_);
     output_ << std::endl;
     output_.close();
 }
@@ -27,7 +25,7 @@ VizVisitor::~VizVisitor(){
 //---------------------
 
 void VizVisitor::visualiseAST(std::shared_ptr<BProgram> program){
-    fprintf(stderr,"Visualising : %s\n", phase_.c_str());
+    spdlog::info("Visualising : {0}", phase_);
     output_ << "digraph { \n";
         program->accept(this);
     output_ << "}";
@@ -45,7 +43,7 @@ std::string VizVisitor::getCurrentName(std::string s){
     std::set<std::string>::iterator it = node_base_names_.find(s);
 
     if(it == node_base_names_.end()){
-        if(verbosity_) fprintf(stderr,"Node name not in known set, possible typo: %s\n", s.c_str());
+        spdlog::info("Node name not in known set, possible typo: {0}", s);
     }
     int unique = unique_namer_map_[s];
     return s + std::to_string(unique);
@@ -59,7 +57,7 @@ std::string VizVisitor::getAndAdvanceName(std::string s){
     std::set<std::string>::iterator it = node_base_names_.find(s);
 
     if(it == node_base_names_.end()){
-        if(verbosity_) fprintf(stderr,"Node name not in known set, possible typo: %s\n", s.c_str());
+        spdlog::info("Node name not in known set, possible typo: {0}", s);
     }
     int unique = unique_namer_map_[s]++;
     return s + std::to_string(unique);
@@ -83,10 +81,10 @@ void VizVisitor::addNodeChild(std::string parent_name, std::string child_name){
 
 void VizVisitor::pushName(std::string s){
     name_stack_.push_back(s);
-    if(verbosity_){
-        fprintf(stderr, "-----pushed----\n");
+    if(spdlog::get_level() <= spdlog::level::debug){
+        spdlog::debug("-----pushed---");
         for (std::string s : name_stack_){
-            fprintf(stderr,"%s\n",s.c_str());
+            spdlog::debug("{0}",s);
         }
     }
 }
@@ -94,10 +92,10 @@ void VizVisitor::pushName(std::string s){
 std::string VizVisitor::popName(){
     std::string to_pop = name_stack_.at(name_stack_.size()-1);
     name_stack_.pop_back();
-    if (verbosity_) {
-        fprintf(stderr, "-----popped----\n");
+    if(spdlog::get_level() <= spdlog::level::debug){
+        spdlog::debug("-----popped----");
         for (std::string s : name_stack_){
-            fprintf(stderr,"%s\n",s.c_str());
+            spdlog::debug("{0}",s);
         }
     }
     return to_pop;
@@ -125,7 +123,7 @@ void VizVisitor::funcDefsAction(FuncDefs * func_defs_node){
     int post_stack_size = name_stack_.size();
     int stack_diff = post_stack_size-pre_stack_size;
     if(stack_diff != func_defs_node->countFuncs()){
-        fprintf(stderr,"Stack size increase %d is different to number of function definitions %d\n ",stack_diff,func_defs_node->countFuncs());
+        spdlog::error("Stack size increase {0:d} is different to number of function definitions {1:d}", stack_diff,func_defs_node->countFuncs());
         throw BError();
     }
     for (int i =0; i<stack_diff;++i){
@@ -142,7 +140,7 @@ void VizVisitor::topLevelsAction(TopLevels * top_levels){
     int post_stack_size = name_stack_.size();
     int stack_diff = post_stack_size-pre_stack_size;
     if(stack_diff != top_levels->countStatements()){
-        fprintf(stderr,"Stack size increase %d is different to number of top level statements %d",stack_diff,top_levels->countStatements());
+        spdlog::error("Stack size increase {0:d} is different to number of top level statements {1:d}",stack_diff,top_levels->countStatements());
         throw BError();
     }
     for (int i =0; i<stack_diff;++i){
@@ -304,7 +302,6 @@ void VizVisitor::blockStAction(BlockStatementAST * block_node) {
     std::shared_ptr<StatementAST> statement_node;
     std::string statement_name;
     block_node->resetStatementIndex();
-    //fprintf(stderr,"action %i\n",block_node->anotherStatement());
     while (block_node->anotherStatement()){
         block_node->statementAcceptOne(this);
         statement_name = popName();
@@ -395,13 +392,13 @@ void VizVisitor::functionAction(FunctionAST * func_node) {
     std::string identifier_str = proto_node.getName();
     addNodeLabel(function_name, "define "+identifier_str);
 
-    fprintf(stderr,"accepting proto\n");
+    spdlog::debug("accepting proto of {0}", proto_node.getName());
 
     func_node->protoAccept(this);
     std::string proto_name = popName();
     addNodeChild(function_name, proto_name);
 
-    fprintf(stderr,"accepting body\n");
+    spdlog::debug("accepting body of {0}", proto_node.getName());
 
     func_node->bodyAccept(this);
     std::string body_name = popName();
