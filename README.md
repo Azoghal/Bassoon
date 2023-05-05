@@ -37,6 +37,7 @@ define fancyFunc(a of int, b of double) gives int as {
 ```
 
 Current Language Syntax
+```
 define fancyFunc(a of int, b of double) gives int as {
     bool condition;
     condition = b > 0.5;
@@ -57,6 +58,7 @@ define fancyFunc(a of int, b of double) gives int as {
     }
     return -1;
 }
+```
 
 Most of these changes are to avoid needless complexity in uninteresting areas (the parser), particularly the use of semicolon terminators and parentheses in control flow structures. A standout feature that is missing is binary boolean operations.
 
