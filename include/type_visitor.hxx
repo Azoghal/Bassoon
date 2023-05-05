@@ -51,7 +51,7 @@ class TypeVisitor : public ASTVisitor{
     bool isInFuncContext(std::string candidate_f){for (auto f: func_types_){if(f.first==candidate_f){return true;}}return false;}
 
     void addVarDefinition(std::string identifier, BType type);
-    bool varIsDefined(std::string identifier);
+    //bool varIsDefined(std::string identifier);
     bool funcIsDefined(std::string func_name);
 
     void printVarScopes();

@@ -69,8 +69,8 @@ void TypeVisitor::typecheckTopLevels(std::shared_ptr<TopLevels> top_levels){
 BType TypeVisitor::typeContext(std::string identifier){
     std::vector<BType> identifier_types = identifier_stacks_[identifier];
     if (identifier_types.size() == 0){
-        spdlog::error("Variable {0} referenced before definition", identifier);
-        throw BError();
+        spdlog::error("Variable {0} not in type context", identifier);
+        throw TypeContextError();
     }
     return identifier_types[identifier_types.size()-1];
 }
@@ -79,18 +79,18 @@ BFType TypeVisitor::funcContext(std::string func_name){
     BFType func_type = func_types_[func_name];
     if (!func_type.isValid()){
         spdlog::error("Function {0} not defined", func_name);
-        throw BError();
+        throw FuncContextError();
     }
     return func_type;
 }
 
-bool TypeVisitor::varIsDefined(std::string identifier){
-    std::vector<BType> identifier_types = identifier_stacks_[identifier];
-    if (identifier_types.size() == 0){
-        return false;
-    }
-    return true;
-}
+// bool TypeVisitor::varIsDefined(std::string identifier){
+//     std::vector<BType> identifier_types = identifier_stacks_[identifier];
+//     if (identifier_types.size() == 0){
+//         return false;
+//     }
+//     return true;
+// }
 
 void TypeVisitor::addVarDefinition(std::string identifier, BType type){
     pushToCurrentScope(identifier);
@@ -271,12 +271,13 @@ void TypeVisitor::doubleExprAction(DoubleExprAST * double_node) {
 void TypeVisitor::variableExprAction(VariableExprAST * variable_node) {
     // Variables should only appear when they are defined
     std::string variable_name = variable_node->getName();
-    if (!varIsDefined(variable_name)){
-        std::string loc_str = variable_node->getLocStr();
-        spdlog::error("Variable {0} not defined before use at {1}", variable_name, loc_str);
-        throw BError();
-    }else{
+    std::string loc_str = variable_node->getLocStr();
+
+    try{
         variable_node->setType(typeContext(variable_name));
+    }catch (InvalidReferenceError e){
+        // add src location
+        throw InvalidReferenceError(variable_name,loc_str);
     }
 }
 
@@ -619,13 +620,13 @@ void TypeVisitor::assignStAction(AssignStatementAST * assign_node){
     // var = expr
     // 1. a in scope definitions
     std::string assigned_var = assign_node->getIdentifier();
-    if(!varIsDefined(assigned_var)){
-        spdlog::error("Assigned variable {0} not defined before use at {1}", assigned_var, assign_node->getLocStr());
-        throw BError();
+    try{
+        BType defined_type = typeContext(assigned_var);
+        assign_node->setDestType(defined_type);
+    }catch(TypeContextError e){
+        throw InvalidReferenceError(assigned_var,assign_node->getLocStr());
     }
-    // var is defined
-    BType defined_type = typeContext(assigned_var);
-    assign_node->setDestType(defined_type);
+    
 
     // 2. expr types 
     assign_node->valueAccept(this);

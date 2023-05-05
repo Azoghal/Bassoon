@@ -1,4 +1,4 @@
-message(STATUS "attempting to build test executable")
+#message(STATUS "attempting to build test executable")
 
 file(COPY test_scripts DESTINATION .)
 configure_file(test.bs . COPYONLY)
