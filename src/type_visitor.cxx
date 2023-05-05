@@ -620,8 +620,9 @@ void TypeVisitor::assignStAction(AssignStatementAST * assign_node){
     // var = expr
     // 1. a in scope definitions
     std::string assigned_var = assign_node->getIdentifier();
+    BType defined_type;
     try{
-        BType defined_type = typeContext(assigned_var);
+        defined_type = typeContext(assigned_var);
         assign_node->setDestType(defined_type);
     }catch(TypeContextError e){
         throw InvalidReferenceError(assigned_var,assign_node->getLocStr());
