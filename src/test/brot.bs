@@ -1,0 +1,95 @@
+# A Bassoon Mandelbrot
+
+# Canvas Size
+W of int = 80;
+H of int = 80;
+
+# Complex Plane
+Ox of double = -0.4;
+Oy of double = 0.0;
+Or of double = 2.0;
+
+define iter(re of double, im of double) gives int as{
+    iterations of int = 0;
+    x of double = 0.0;
+    y of double = 0.0;
+    condition of bool = true;
+    while(condition){
+        xtemp of double = x*x - y*y + re;
+        y = 2.0*x*y + im;
+        x = xtemp;
+        iterations = iterations + 1;
+        condition = (x*x + y*y) < 4.1;
+        if (iterations > 100){
+            return 0;
+        } 
+    }
+    return iterations;
+}
+
+define character(its of int) gives int as {
+    # 32 46 58 45 126 61 43 42 35 37 36 38 64
+    if(its <1){
+        # No escape
+        return 32;
+    }
+    if(its < 2){
+        return 32;
+    }
+    if(its < 3){
+        return 46;
+    }
+    if(its < 4){
+        return 58;
+    }
+    if(its < 5){
+        return 126;
+    }
+    if(its < 6){
+        return 61;
+    }
+    if(its < 10){
+        return 43;
+    }
+    if(its < 15){
+        return 42;
+    }
+    if(its < 20){
+        return 35;
+    }
+    if(its < 30){
+        return 37;
+    }
+    if(its < 100){
+        return 64;
+    }
+    return 32;
+}
+
+define printCanvas(width of int, height of int, Ox of double, Oy of double, Or of double) as {
+    left of double = Ox - Or;
+    right of double = Ox + Or;
+    top of double = Oy + Or;
+    bottom of double = Oy - Or;
+    stepx of double = (right-left)/width;
+    stepy of double = (top-bottom)/height;
+    cx of double = left;
+    cy of double = top;
+    for(y of int = 0; y < height; y=y+1;){
+        for (x of int = 0; x < width; x=x+1;){
+            # Print character from lookup
+            putchar(character(iter(cx,cy)));
+            # Space for keeping things squarish in console
+            putchar(32);
+            cx = cx + stepx;
+        }
+        cy = cy - stepy;
+        cx = left;
+        putchar(10);
+    }
+}
+
+printCanvas(W,H, Ox, Oy, Or);
+
+# Characters by level of fill
+# .:-~=+*#%$&@
