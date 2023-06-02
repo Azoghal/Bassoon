@@ -340,6 +340,14 @@ llvm::Value * CodeGenerator::createGreaterThan(BType lhs_type, BType rhs_type, l
     }
 }
 
+llvm::Value * CodeGenerator::createAnd(BType res_type, llvm::Value * lhs_val, llvm::Value * rhs_val){
+    return builder_->CreateAnd(lhs_val, rhs_val);
+}
+
+llvm::Value * CodeGenerator::createOr(BType res_type, llvm::Value * lhs_val, llvm::Value * rhs_val){
+    return builder_->CreateOr(lhs_val, rhs_val);
+}
+
 //--------------------
 // Expression Actions
 //--------------------
@@ -501,6 +509,14 @@ void CodeGenerator::binaryExprAction(BinaryExprAST * binary_node){
     }
     case('>'):{
         binary_val = createGreaterThan(lhs_type, rhs_type, lhs_val, rhs_val);
+        break;
+    }
+    case('&'):{
+        binary_val = createAnd(res_type, lhs_val, rhs_val);
+        break;
+    }
+    case('|'):{
+        binary_val = createOr(res_type, lhs_val, rhs_val);
         break;
     }
     default:{
