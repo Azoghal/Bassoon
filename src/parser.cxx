@@ -8,7 +8,7 @@ namespace bassoon
 {
 
 int Parser::current_token_ = ' ';
-std::map<char,int> Parser::bin_op_precedence_ = std::map<char,int>({{'<', 5}, {'>',6}, {'-', 10}, {'+', 20}, {'/', 30}, {'*', 40}});
+std::map<char,int> Parser::bin_op_precedence_ = std::map<char,int>({{'<', 5}, {'>',6}, {'+', 10}, {'-', 20}, {'/', 30}, {'*', 40}});
 std::function<int()> Parser::bassoon_nextTok_ = Lexer::nextTok;
 
 
@@ -255,6 +255,7 @@ std::unique_ptr<StatementAST> Parser::parseStatement(){
     case tok_while:
         return parseWhileStatement();
     default:
+        fprintf(stderr,"location %i", Lexer::getLoc().line);
         return LogErrorS("Unexpected token to start statement.");
     }
 }
