@@ -1,9 +1,9 @@
 find_package(LLVM REQUIRED CONFIG)
 
 link_libraries()
-execute_process(COMMAND llvm-config --libs OUTPUT_VARIABLE LIBS)
-execute_process(COMMAND llvm-config --system-libs OUTPUT_VARIABLE SYS_LIBS)
-execute_process(COMMAND llvm-config --ldflags OUTPUT_VARIABLE LDF)
+execute_process(COMMAND llvm-config-18 --libs OUTPUT_VARIABLE LIBS)
+execute_process(COMMAND llvm-config-18 --system-libs OUTPUT_VARIABLE SYS_LIBS)
+execute_process(COMMAND llvm-config-18 --ldflags OUTPUT_VARIABLE LDF)
 message(STATUS "Found LLVM" ${LIBS})
 
 string(STRIP ${LIBS} LIBS)
