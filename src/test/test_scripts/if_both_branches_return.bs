@@ -1,0 +1,10 @@
+define sign(n of int) gives int as {
+    if (n < 0) {
+        return -1;
+    }
+    else {
+        return 1;
+    }
+}
+
+result of int = sign(-3);

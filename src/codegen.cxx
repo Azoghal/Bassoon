@@ -90,7 +90,7 @@ void CodeGenerator::setTarget(){
     std::string cpu = "generic";
     std::string features = "";
     llvm::TargetOptions options;
-    auto relocation_model = llvm::Optional<llvm::Reloc::Model>();
+    auto relocation_model = std::optional<llvm::Reloc::Model>();
     target_machine_ = target->createTargetMachine(target_triple, cpu, features, options, relocation_model);
     module_->setDataLayout(target_machine_->createDataLayout());
     module_->setTargetTriple(target_triple);
@@ -107,7 +107,7 @@ void CodeGenerator::compile(){
     }
 
     llvm::legacy::PassManager code_gen_pass_manager;
-    auto file_type = llvm::CGFT_ObjectFile; // code gen file type
+    auto file_type = llvm::CodeGenFileType::ObjectFile;
 
     if(target_machine_->addPassesToEmitFile(code_gen_pass_manager, destination, nullptr, file_type)){
         llvm::errs() << "target machine can't emit a file of this type";
@@ -554,7 +554,7 @@ void CodeGenerator::ifStAction(IfStatementAST * if_node){
     
     if(if_node->getHasElse()){
         // Add else block to end of function and start inserting there.
-        parent_function->getBasicBlockList().push_back(else_block);
+        else_block->insertInto(parent_function);
         builder_->SetInsertPoint(else_block);
 
         if_node->elseAccept(this);
@@ -565,7 +565,11 @@ void CodeGenerator::ifStAction(IfStatementAST * if_node){
         }
     }
 
-    parent_function->getBasicBlockList().push_back(merge_block);
+    // TODO: if both then and else branches terminate (e.g. both return), merge_block
+    // has no predecessors and LLVM's verifier rejects the function. Need to skip
+    // emitting merge_block (and avoid setting the insert point into it) when all
+    // predecessor paths are already terminated.
+    merge_block->insertInto(parent_function);
     builder_->SetInsertPoint(merge_block);
 }
 
@@ -585,7 +589,7 @@ void CodeGenerator::forStAction(ForStatementAST * for_node){
     builder_->SetInsertPoint(loop_start_block);
     for_node->startAccept(this);
     builder_->CreateBr(loop_cond_block);
-    parent_function->getBasicBlockList().push_back(loop_cond_block);
+    loop_cond_block->insertInto(parent_function);
     builder_->SetInsertPoint(loop_cond_block);
 
     for_node->endAccept(this);
@@ -594,7 +598,7 @@ void CodeGenerator::forStAction(ForStatementAST * for_node){
     builder_->CreateCondBr(cond_val, loop_body_block, loop_end_block);
     
     // Insert the body and step code
-    parent_function->getBasicBlockList().push_back(loop_body_block);
+    loop_body_block->insertInto(parent_function);
     builder_->SetInsertPoint(loop_body_block);
     for_node->bodyAccept(this);
     const llvm::Instruction * term_inst = builder_->GetInsertBlock()->getTerminator();
@@ -610,7 +614,7 @@ void CodeGenerator::forStAction(ForStatementAST * for_node){
 
     // TODO: handle scoping of induction variables?
     // Add loop end at end of function
-    parent_function->getBasicBlockList().push_back(loop_end_block);
+    loop_end_block->insertInto(parent_function);
     builder_->SetInsertPoint(loop_end_block);
 }
 
@@ -628,7 +632,7 @@ void CodeGenerator::whileStAction(WhileStatementAST * while_node){
     llvm::Value * cond_val = popLlvmValue();
     builder_->CreateCondBr(cond_val,loop_body,loop_end);
     
-    parent_function->getBasicBlockList().push_back(loop_body);
+    loop_body->insertInto(parent_function);
     builder_->SetInsertPoint(loop_body);
     while_node->bodyAccept(this);
     llvm::Instruction * term_inst = builder_->GetInsertBlock()->getTerminator();
@@ -637,7 +641,7 @@ void CodeGenerator::whileStAction(WhileStatementAST * while_node){
         builder_->CreateBr(loop_cond);
     }
 
-    parent_function->getBasicBlockList().push_back(loop_end);
+    loop_end->insertInto(parent_function);
     builder_->SetInsertPoint(loop_end);
 }
 
